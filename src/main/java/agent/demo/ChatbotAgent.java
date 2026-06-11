@@ -17,9 +17,12 @@ package agent.demo;
 
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.shelltool.ShellToolAgentHook;
+import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
 import com.alibaba.cloud.ai.graph.agent.tools.ShellTool;
 import com.alibaba.cloud.ai.graph.agent.extension.tools.filesystem.ReadFileTool;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+import com.alibaba.cloud.ai.graph.skills.registry.SkillRegistry;
+import com.alibaba.cloud.ai.graph.skills.registry.filesystem.FileSystemSkillRegistry;
 
 import org.springframework.ai.chat.model.ChatModel;
 
@@ -29,16 +32,14 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.File;
+import java.util.List;
 
 
 @Configuration
 public class ChatbotAgent {
 
 	private static final String INSTRUCTION = """
-			You are a helpful assistant named SAA.
-			You have access to tools that can help you execute shell commands, run Python code, and view text files.
-			Use these tools to assist users with their tasks.
+			你叫小蓝，是我的个人助理.你有一些技能和工具，可以帮我完成对应的任务。
 			""";
 
 	@Bean
@@ -46,15 +47,24 @@ public class ChatbotAgent {
 			ToolCallback executeShellCommand,
 			ToolCallback executePythonCode,
 			ToolCallback viewTextFile,
+			SkillRegistry skillRegistry,
 			MemorySaver memorySaver) {
+		
+		SkillsAgentHook skillsHook = SkillsAgentHook.builder()
+				.skillRegistry(skillRegistry)
+				.build();
+		
+		ShellToolAgentHook shellHook = ShellToolAgentHook.builder()
+				.shellToolName(executeShellCommand.getToolDefinition().name())
+				.build();
+		
 		return ReactAgent.builder()
-				.name("SAA")
+				.name("小蓝")
 				.model(chatModel)
 				.instruction(INSTRUCTION)
 				.enableLogging(true)
 				.saver(memorySaver)
-				// Must set ShellToolAgentHook to manage shell session lifecycle for executeShellCommand
-				.hooks(ShellToolAgentHook.builder().shellToolName(executeShellCommand.getToolDefinition().name()).build())
+				.hooks(List.of(skillsHook, shellHook))
 				.tools(
 						executeShellCommand,
 						executePythonCode,
@@ -68,11 +78,17 @@ public class ChatbotAgent {
 		return new MemorySaver();
 	}
 
+	@Bean
+	public SkillRegistry skillRegistry() {
+		return FileSystemSkillRegistry.builder()
+				.projectSkillsDirectory(System.getProperty("user.dir") + "/skills")
+				.build();
+	}
+
 	// Tool: execute_shell_command
 	@Bean
 	public ToolCallback executeShellCommand() {
-		// Use ShellTool with a temporary workspace directory
-		String workspaceRoot = System.getProperty("java.io.tmpdir") + File.separator + "agent-workspace";
+		String workspaceRoot = System.getProperty("user.dir");
 		return ShellTool.builder(workspaceRoot)
 				.withName("execute_shell_command")
 				.withDescription("Execute a shell command inside a persistent session. Before running a command, " +
@@ -97,7 +113,6 @@ public class ChatbotAgent {
 	// Tool: view_text_file
 	@Bean
 	public ToolCallback viewTextFile() {
-		// Create a custom wrapper to match the original tool name
 		ReadFileTool readFileTool = new ReadFileTool();
 		return FunctionToolCallback.builder("view_text_file", readFileTool)
 				.description("View the contents of a text file. The file_path parameter must be an absolute path. " +
@@ -106,6 +121,4 @@ public class ChatbotAgent {
 				.inputType(ReadFileTool.ReadFileRequest.class)
 				.build();
 	}
-
 }
-
