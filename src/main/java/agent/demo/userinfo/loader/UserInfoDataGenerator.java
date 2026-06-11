@@ -93,10 +93,6 @@ public class UserInfoDataGenerator {
             String fullName = surname + givenName;
             user.setName(fullName);
 
-            // 生成拼音
-            user.setNamePinyin(getPinyin(fullName));
-            user.setNamePinyinInitial(getPinyinInitial(fullName));
-
             // 生成年龄（18-70岁）
             user.setAge(18 + RANDOM.nextInt(53));
 

@@ -43,17 +43,50 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     @Override
     public List<UserInfo> getCustomersByPinyin(String pinyin) {
-        return dataCache.getCustomersByPinyin(pinyin);
+        if (pinyin == null || pinyin.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 实时转换拼音并匹配
+        return dataCache.getAllCustomers().stream()
+                .filter(customer -> {
+                    String customerPinyin = PinyinMatcher.getPinyin(customer.getName());
+                    return customerPinyin.equalsIgnoreCase(pinyin);
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<UserInfo> getCustomersByPinyinInitial(String pinyinInitial) {
-        return dataCache.getCustomersByPinyinInitial(pinyinInitial);
+        if (pinyinInitial == null || pinyinInitial.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 实时提取首字母并匹配
+        return dataCache.getAllCustomers().stream()
+                .filter(customer -> {
+                    String customerInitial = PinyinMatcher.getPinyinInitial(customer.getName());
+                    return customerInitial.equalsIgnoreCase(pinyinInitial);
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<UserInfo> searchByPinyinFuzzy(String keyword) {
-        return dataCache.searchByPinyinFuzzy(keyword);
+        if (keyword == null || keyword.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String lowerKeyword = keyword.toLowerCase();
+
+        // 实时进行拼音模糊匹配
+        return dataCache.getAllCustomers().stream()
+                .filter(customer -> {
+                    String pinyin = PinyinMatcher.getPinyin(customer.getName()).toLowerCase();
+                    String initial = PinyinMatcher.getPinyinInitial(customer.getName()).toLowerCase();
+                    return pinyin.contains(lowerKeyword) || initial.contains(lowerKeyword);
+                })
+                .collect(Collectors.toList());
     }
 
     @Override

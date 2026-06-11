@@ -20,9 +20,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 
 @SpringBootApplication
+@ComponentScan(basePackages = {"agent.demo.agent", "agent.demo.userinfo"})
 public class ChatbotApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(ChatbotApplication.class, args);

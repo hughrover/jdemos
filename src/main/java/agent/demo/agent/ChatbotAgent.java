@@ -16,6 +16,7 @@
 package agent.demo.agent;
 
 import agent.demo.agent.tools.PythonTool;
+import agent.demo.userinfo.tools.UserInfoTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.shelltool.ShellToolAgentHook;
 import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
@@ -48,6 +49,7 @@ public class ChatbotAgent {
 			ToolCallback executeShellCommand,
 			ToolCallback executePythonCode,
 			ToolCallback viewTextFile,
+			ToolCallback searchUsers,
 			SkillRegistry skillRegistry,
 			MemorySaver memorySaver) {
 		
@@ -69,7 +71,8 @@ public class ChatbotAgent {
 				.tools(
 						executeShellCommand,
 						executePythonCode,
-						viewTextFile
+						viewTextFile,
+						searchUsers
 				)
 				.build();
 	}
@@ -120,6 +123,15 @@ public class ChatbotAgent {
 						"You can specify offset and limit to read specific portions of the file. " +
 						"By default, reads up to 500 lines starting from the beginning of the file.")
 				.inputType(ReadFileTool.ReadFileRequest.class)
+				.build();
+	}
+
+	// Tool: search_users
+	@Bean
+	public ToolCallback searchUsers(UserInfoTool userInfoTool) {
+		return FunctionToolCallback.builder("search_users", userInfoTool)
+				.description("查询用户信息。支持中文姓名、拼音、首字母等多种查询方式。例如：查询'张三'、'zhangsan'、'zs'都可以找到对应的用户。")
+				.inputType(UserInfoTool.SearchRequest.class)
 				.build();
 	}
 }

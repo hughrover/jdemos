@@ -56,14 +56,4 @@ public class UserInfo {
      * 职位
      */
     private String position;
-
-    /**
-     * 姓名拼音（用于拼音匹配）
-     */
-    private String namePinyin;
-
-    /**
-     * 姓名拼音首字母（用于首字母匹配）
-     */
-    private String namePinyinInitial;
 }

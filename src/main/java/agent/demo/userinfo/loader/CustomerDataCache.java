@@ -19,15 +19,11 @@ public class CustomerDataCache {
     private List<UserInfo> customerList;
     private Map<Long, UserInfo> customerByIdMap;
     private Map<String, List<UserInfo>> customerByNameMap;
-    private Map<String, List<UserInfo>> customerByPinyinMap;
-    private Map<String, List<UserInfo>> customerByPinyinInitialMap;
 
     private CustomerDataCache() {
         this.dataLoader = new CustomerDataLoader();
         this.customerByIdMap = new ConcurrentHashMap<>();
         this.customerByNameMap = new ConcurrentHashMap<>();
-        this.customerByPinyinMap = new ConcurrentHashMap<>();
-        this.customerByPinyinInitialMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -55,8 +51,6 @@ public class CustomerDataCache {
     private void buildIndex() {
         customerByIdMap.clear();
         customerByNameMap.clear();
-        customerByPinyinMap.clear();
-        customerByPinyinInitialMap.clear();
 
         for (UserInfo customer : customerList) {
             // ID索引
@@ -64,16 +58,6 @@ public class CustomerDataCache {
 
             // 姓名索引
             customerByNameMap.computeIfAbsent(customer.getName(), k -> new ArrayList<>()).add(customer);
-
-            // 拼音索引
-            if (customer.getNamePinyin() != null) {
-                customerByPinyinMap.computeIfAbsent(customer.getNamePinyin().toLowerCase(), k -> new ArrayList<>()).add(customer);
-            }
-
-            // 拼音首字母索引
-            if (customer.getNamePinyinInitial() != null) {
-                customerByPinyinInitialMap.computeIfAbsent(customer.getNamePinyinInitial().toLowerCase(), k -> new ArrayList<>()).add(customer);
-            }
         }
     }
 
@@ -96,56 +80,6 @@ public class CustomerDataCache {
      */
     public List<UserInfo> getCustomersByName(String name) {
         return customerByNameMap.getOrDefault(name, Collections.emptyList());
-    }
-
-    /**
-     * 根据拼音查询
-     */
-    public List<UserInfo> getCustomersByPinyin(String pinyin) {
-        if (pinyin == null || pinyin.isEmpty()) {
-            return Collections.emptyList();
-        }
-        String lowerPinyin = pinyin.toLowerCase();
-        return customerByPinyinMap.getOrDefault(lowerPinyin, Collections.emptyList());
-    }
-
-    /**
-     * 根据拼音首字母查询
-     */
-    public List<UserInfo> getCustomersByPinyinInitial(String pinyinInitial) {
-        if (pinyinInitial == null || pinyinInitial.isEmpty()) {
-            return Collections.emptyList();
-        }
-        String lowerInitial = pinyinInitial.toLowerCase();
-        return customerByPinyinInitialMap.getOrDefault(lowerInitial, Collections.emptyList());
-    }
-
-    /**
-     * 模糊拼音查询（包含匹配）
-     */
-    public List<UserInfo> searchByPinyinFuzzy(String keyword) {
-        if (keyword == null || keyword.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        String lowerKeyword = keyword.toLowerCase();
-        Set<UserInfo> results = new HashSet<>();
-
-        // 在拼音中搜索
-        for (Map.Entry<String, List<UserInfo>> entry : customerByPinyinMap.entrySet()) {
-            if (entry.getKey().contains(lowerKeyword)) {
-                results.addAll(entry.getValue());
-            }
-        }
-
-        // 在拼音首字母中搜索
-        for (Map.Entry<String, List<UserInfo>> entry : customerByPinyinInitialMap.entrySet()) {
-            if (entry.getKey().contains(lowerKeyword)) {
-                results.addAll(entry.getValue());
-            }
-        }
-
-        return new ArrayList<>(results);
     }
 
     /**

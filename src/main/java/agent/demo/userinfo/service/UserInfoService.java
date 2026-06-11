@@ -25,17 +25,17 @@ public interface UserInfoService {
     List<UserInfo> getCustomersByName(String name);
 
     /**
-     * 根据拼音查询
+     * 根据拼音查询（实时转换）
      */
     List<UserInfo> getCustomersByPinyin(String pinyin);
 
     /**
-     * 根据拼音首字母查询
+     * 根据拼音首字母查询（实时提取）
      */
     List<UserInfo> getCustomersByPinyinInitial(String pinyinInitial);
 
     /**
-     * 模糊拼音查询
+     * 模糊拼音查询（实时转换）
      */
     List<UserInfo> searchByPinyinFuzzy(String keyword);
 

@@ -15,6 +15,20 @@ This skill provides functionality to query user information from a database of 1
 - Fuzzy matching for similar pronunciations
 - Smart search that combines all matching methods
 
+## Implementation
+
+This skill uses the **UserInfoTool** Java service to perform queries. The tool is registered as a Spring AI ToolCallback and can be called directly by the intelligent agent.
+
+### Key Components
+
+1. **UserInfoTool**: Java tool that wraps UserInfoService
+2. **UserInfoService**: Service with smart search capabilities
+3. **PinyinMatcher**: Handles real-time pinyin conversion and matching
+
+### Data Storage
+
+Customer data is stored in `data/customers.json` with 1000 simulated customer records. The data does NOT contain pre-stored pinyin fields - pinyin conversion is performed in real-time by the system service.
+
 ## Usage
 
 ### Query by Chinese Name
@@ -67,19 +81,7 @@ To find a user by their ID:
 查询用户ID：1
 ```
 
-## Implementation
-
-The skill uses the following components:
-
-1. **CustomerDataCache**: Manages customer data in memory with indexing
-2. **PinyinMatcher**: Handles pinyin conversion and matching
-3. **UserInfoService**: Provides the query interface
-
-### Data Storage
-
-Customer data is stored in `data/customers.json` with 1000 simulated customer records.
-
-### Query Logic
+## Query Logic
 
 The smart search function follows this priority:
 
@@ -123,3 +125,33 @@ The skill returns user information in the following format:
 ```
 
 For multiple results, the information is presented as a numbered list.
+
+## Technical Details
+
+### Pinyin Conversion
+
+Pinyin conversion is performed in real-time using the `PinyinMatcher` utility class. This approach:
+
+- Eliminates the need to store pinyin fields in the data model
+- Makes the data model more generic and suitable for real-world systems
+- Leverages the existing `pinyin4j` library for accurate conversion
+
+### Service Architecture
+
+The skill uses a layered architecture:
+
+```
+UserInfoTool (ToolCallback)
+    ↓
+UserInfoService (Service Layer)
+    ↓
+CustomerDataCache (Data Cache)
+    ↓
+data/customers.json (Data File)
+```
+
+### Performance
+
+- Data is cached in memory for fast access
+- Pinyin conversion is performed on-demand
+- Results are limited to 20 items for display purposes
