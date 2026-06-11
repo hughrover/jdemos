@@ -1,4 +1,4 @@
-package agent.demo;
+package agent.demo.agent;
 
 
 import org.springframework.stereotype.Component;

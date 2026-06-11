@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package agent.demo;
+package agent.demo.agent;
 
 import com.alibaba.cloud.ai.agent.studio.loader.AgentLoader;
 import com.alibaba.cloud.ai.graph.GraphRepresentation;

@@ -1,4 +1,4 @@
-package agent.demo;
+package agent.demo.agent;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;

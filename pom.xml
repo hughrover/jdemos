@@ -102,6 +102,13 @@
             <type>pom</type>
             <optional>true</optional>
         </dependency>
+
+        <!-- pinyin4j - pinyin conversion library -->
+        <dependency>
+            <groupId>com.belerweb</groupId>
+            <artifactId>pinyin4j</artifactId>
+            <version>2.5.1</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -114,6 +121,11 @@
     </build>
 
     <repositories>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
         <repository>
             <snapshots>
                 <enabled>false</enabled>
