@@ -15,6 +15,7 @@
  */
 package agent.demo.agent;
 
+import agent.demo.agent.tools.PythonTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.shelltool.ShellToolAgentHook;
 import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;

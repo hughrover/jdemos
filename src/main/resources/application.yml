@@ -1,0 +1,10 @@
+spring:
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY}
+      chat:
+        options:
+          model: qwen-plus
+
+server:
+  port: 8080

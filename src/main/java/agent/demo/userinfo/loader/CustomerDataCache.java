@@ -1,0 +1,179 @@
+package agent.demo.userinfo.loader;
+
+import agent.demo.userinfo.model.UserInfo;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * 客户数据缓存管理器
+ * 提供内存缓存和快速查询功能
+ */
+public class CustomerDataCache {
+
+    private static CustomerDataCache instance;
+
+    private final CustomerDataLoader dataLoader;
+    private List<UserInfo> customerList;
+    private Map<Long, UserInfo> customerByIdMap;
+    private Map<String, List<UserInfo>> customerByNameMap;
+    private Map<String, List<UserInfo>> customerByPinyinMap;
+    private Map<String, List<UserInfo>> customerByPinyinInitialMap;
+
+    private CustomerDataCache() {
+        this.dataLoader = new CustomerDataLoader();
+        this.customerByIdMap = new ConcurrentHashMap<>();
+        this.customerByNameMap = new ConcurrentHashMap<>();
+        this.customerByPinyinMap = new ConcurrentHashMap<>();
+        this.customerByPinyinInitialMap = new ConcurrentHashMap<>();
+    }
+
+    /**
+     * 获取单例实例
+     */
+    public static synchronized CustomerDataCache getInstance() {
+        if (instance == null) {
+            instance = new CustomerDataCache();
+        }
+        return instance;
+    }
+
+    /**
+     * 初始化缓存
+     */
+    public void initialize() throws IOException {
+        dataLoader.load();
+        customerList = dataLoader.getAllCustomers();
+        buildIndex();
+    }
+
+    /**
+     * 构建索引
+     */
+    private void buildIndex() {
+        customerByIdMap.clear();
+        customerByNameMap.clear();
+        customerByPinyinMap.clear();
+        customerByPinyinInitialMap.clear();
+
+        for (UserInfo customer : customerList) {
+            // ID索引
+            customerByIdMap.put(customer.getId(), customer);
+
+            // 姓名索引
+            customerByNameMap.computeIfAbsent(customer.getName(), k -> new ArrayList<>()).add(customer);
+
+            // 拼音索引
+            if (customer.getNamePinyin() != null) {
+                customerByPinyinMap.computeIfAbsent(customer.getNamePinyin().toLowerCase(), k -> new ArrayList<>()).add(customer);
+            }
+
+            // 拼音首字母索引
+            if (customer.getNamePinyinInitial() != null) {
+                customerByPinyinInitialMap.computeIfAbsent(customer.getNamePinyinInitial().toLowerCase(), k -> new ArrayList<>()).add(customer);
+            }
+        }
+    }
+
+    /**
+     * 获取所有客户
+     */
+    public List<UserInfo> getAllCustomers() {
+        return Collections.unmodifiableList(customerList);
+    }
+
+    /**
+     * 根据ID获取客户
+     */
+    public UserInfo getCustomerById(Long id) {
+        return customerByIdMap.get(id);
+    }
+
+    /**
+     * 根据姓名精确查询
+     */
+    public List<UserInfo> getCustomersByName(String name) {
+        return customerByNameMap.getOrDefault(name, Collections.emptyList());
+    }
+
+    /**
+     * 根据拼音查询
+     */
+    public List<UserInfo> getCustomersByPinyin(String pinyin) {
+        if (pinyin == null || pinyin.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String lowerPinyin = pinyin.toLowerCase();
+        return customerByPinyinMap.getOrDefault(lowerPinyin, Collections.emptyList());
+    }
+
+    /**
+     * 根据拼音首字母查询
+     */
+    public List<UserInfo> getCustomersByPinyinInitial(String pinyinInitial) {
+        if (pinyinInitial == null || pinyinInitial.isEmpty()) {
+            return Collections.emptyList();
+        }
+        String lowerInitial = pinyinInitial.toLowerCase();
+        return customerByPinyinInitialMap.getOrDefault(lowerInitial, Collections.emptyList());
+    }
+
+    /**
+     * 模糊拼音查询（包含匹配）
+     */
+    public List<UserInfo> searchByPinyinFuzzy(String keyword) {
+        if (keyword == null || keyword.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        String lowerKeyword = keyword.toLowerCase();
+        Set<UserInfo> results = new HashSet<>();
+
+        // 在拼音中搜索
+        for (Map.Entry<String, List<UserInfo>> entry : customerByPinyinMap.entrySet()) {
+            if (entry.getKey().contains(lowerKeyword)) {
+                results.addAll(entry.getValue());
+            }
+        }
+
+        // 在拼音首字母中搜索
+        for (Map.Entry<String, List<UserInfo>> entry : customerByPinyinInitialMap.entrySet()) {
+            if (entry.getKey().contains(lowerKeyword)) {
+                results.addAll(entry.getValue());
+            }
+        }
+
+        return new ArrayList<>(results);
+    }
+
+    /**
+     * 模糊姓名查询（包含匹配）
+     */
+    public List<UserInfo> searchByNameFuzzy(String keyword) {
+        if (keyword == null || keyword.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return customerList.stream()
+                .filter(customer -> customer.getName().contains(keyword))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取客户总数
+     */
+    public int getCustomerCount() {
+        return customerList.size();
+    }
+
+    /**
+     * 重新加载数据
+     */
+    public void reload() throws IOException {
+        dataLoader.reload();
+        customerList = dataLoader.getAllCustomers();
+        buildIndex();
+    }
+}

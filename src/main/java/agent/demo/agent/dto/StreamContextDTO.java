@@ -1,4 +1,4 @@
-package agent.demo.agent;
+package agent.demo.agent.dto;
 
 import lombok.Data;
 import java.util.LinkedList;
