@@ -1,28 +1,15 @@
 #!/usr/bin/env python3
 """
 保单查询脚本
-先通过用户查询技能获取用户ID，再查询保单
+接收用户ID列表，查询所有用户的保单
 """
 
 import json
 import sys
 import urllib.request
 import urllib.error
-import urllib.parse
 
-USER_API_URL = "http://localhost:8080/api/users"
 INSURANCE_API_URL = "http://localhost:8080/api/insurance-policies"
-
-def get_user_by_name(name):
-    """根据用户姓名查询用户信息"""
-    encoded_name = urllib.parse.quote(name)
-    url = f"{USER_API_URL}/search?name={encoded_name}"
-    return make_request(url)
-
-def get_user_by_id(user_id):
-    """根据用户ID查询用户信息"""
-    url = f"{USER_API_URL}/{user_id}"
-    return make_request(url)
 
 def get_policies_by_policyholder_id(policyholder_id):
     """根据policyholderId查询保单"""
@@ -79,73 +66,41 @@ def format_policies(policies):
     # 单个保单对象
     return f"找到 1 个保单：\n\n{format_policy(policies)}"
 
-def query_by_user_name(name):
-    """根据用户姓名查询保单"""
-    # 第一步：获取用户信息
-    user_result = get_user_by_name(name)
+def query_by_user_ids(user_ids):
+    """根据用户ID列表查询保单"""
+    all_policies = []
 
-    if isinstance(user_result, dict) and 'error' in user_result:
-        return f"查询用户失败：{user_result['error']}"
+    for user_id in user_ids:
+        try:
+            user_id_int = int(user_id)
+        except ValueError:
+            print(f"跳过无效的用户ID：{user_id}")
+            continue
 
-    if not user_result:
-        return f"未找到用户：{name}"
+        policies_result = get_policies_by_policyholder_id(user_id_int)
 
-    # 获取用户ID
-    if isinstance(user_result, list):
-        if len(user_result) == 0:
-            return f"未找到用户：{name}"
-        user = user_result[0]
-    else:
-        user = user_result
+        if isinstance(policies_result, dict) and 'error' in policies_result:
+            print(f"查询用户 {user_id} 的保单失败：{policies_result['error']}")
+            continue
 
-    user_id = user.get('id')
-    if not user_id:
-        return f"无法获取用户ID"
+        if isinstance(policies_result, list):
+            all_policies.extend(policies_result)
+        elif policies_result:
+            all_policies.append(policies_result)
 
-    # 第二步：查询保单
-    policies_result = get_policies_by_policyholder_id(user_id)
-
-    if isinstance(policies_result, dict) and 'error' in policies_result:
-        return f"查询保单失败：{policies_result['error']}"
-
-    return format_policies(policies_result)
-
-def query_by_user_id(user_id):
-    """根据用户ID查询保单"""
-    try:
-        user_id_int = int(user_id)
-    except ValueError:
-        return f"无效的用户ID：{user_id}"
-
-    policies_result = get_policies_by_policyholder_id(user_id_int)
-
-    if isinstance(policies_result, dict) and 'error' in policies_result:
-        return f"查询保单失败：{policies_result['error']}"
-
-    return format_policies(policies_result)
+    return format_policies(all_policies)
 
 def main():
-    if len(sys.argv) < 3:
-        print("用法: python query_policy.py <查询类型> <查询值>")
-        print("查询类型:")
-        print("  userName - 按用户姓名查询（先获取用户ID，再查询保单）")
-        print("  userId - 按用户ID查询")
+    if len(sys.argv) < 2:
+        print("用法: python query_policy.py <用户ID1> [用户ID2] [用户ID3] ...")
         print("\n示例:")
-        print("  python query_policy.py userName 陶国军")
-        print("  python query_policy.py userId 1")
+        print("  python query_policy.py 1")
+        print("  python query_policy.py 1 2 3")
+        print("  python query_policy.py 4 5")
         sys.exit(1)
 
-    query_type = sys.argv[1]
-    query_value = sys.argv[2]
-
-    if query_type == "userName":
-        result = query_by_user_name(query_value)
-    elif query_type == "userId":
-        result = query_by_user_id(query_value)
-    else:
-        print(f"不支持的查询类型: {query_type}")
-        sys.exit(1)
-
+    user_ids = sys.argv[1:]
+    result = query_by_user_ids(user_ids)
     print(result)
 
 if __name__ == "__main__":

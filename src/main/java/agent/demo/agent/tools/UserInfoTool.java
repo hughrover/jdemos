@@ -58,7 +58,8 @@ public class UserInfoTool implements Function<UserInfoTool.SearchRequest, String
         sb.append("找到 ").append(results.size()).append(" 个匹配的用户：\n\n");
         for (int i = 0; i < Math.min(results.size(), 20); i++) {
             UserInfo user = results.get(i);
-            sb.append(i + 1).append(". ").append(user.getName())
+            sb.append(i + 1).append(". ID:").append(user.getId())
+              .append(" - ").append(user.getName())
               .append(" - ").append(user.getCompany())
               .append(" - ").append(user.getPosition())
               .append("\n");
@@ -76,7 +77,8 @@ public class UserInfoTool implements Function<UserInfoTool.SearchRequest, String
      */
     private String formatUser(UserInfo user) {
         return String.format(
-            "姓名：%s\n年龄：%d\n性别：%s\n电话：%s\n邮箱：%s\n地址：%s\n公司：%s\n职位：%s",
+            "用户ID：%d\n姓名：%s\n年龄：%d\n性别：%s\n电话：%s\n邮箱：%s\n地址：%s\n公司：%s\n职位：%s",
+            user.getId(),
             user.getName(),
             user.getAge(),
             user.getGender(),

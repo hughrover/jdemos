@@ -9,21 +9,31 @@ description: Use this skill when the user wants to query insurance policy inform
 
 This skill provides functionality to query insurance policy information. The query process is:
 
-1. First, get the user ID by user name (using user query API)
-2. Then, query insurance policies by user ID
+1. First, use the user information query skill to get user IDs (supports pinyin fuzzy search)
+2. Then, query insurance policies by user IDs
 
-## IMPORTANT: Use Python Script
+## IMPORTANT: Two-Step Query Process
 
-**You MUST use the Python script to query insurance policy information. Do NOT use any Java tools.**
+**You MUST follow the two-step process to query insurance policies:**
 
-The script is located at: `skills/insurance-policy-query/scripts/query_policy.py`
+### Step 1: Get User IDs
 
-### How to Call the Script
-
-To query insurance policy information, use the `execute_shell_command` tool:
+Use the `search_users` tool to find users by name or pinyin:
 
 ```
-execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py <query_type> <query_value>")
+search_users(query="陈伟")
+search_users(query="chenwei")
+search_users(query="cw")
+```
+
+This will return a list of matching users with their IDs.
+
+### Step 2: Query Policies
+
+Use the `execute_shell_command` tool to query policies by user IDs:
+
+```
+execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py <user_id1> <user_id2> ...")
 ```
 
 ## Usage Examples
@@ -33,18 +43,29 @@ execute_shell_command(command="python3 skills/insurance-policy-query/scripts/que
 To find all policies for a user by their name:
 
 ```
-User: 查看陶国军的保单
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userName 陶国军")
+User: 查看陈伟的保单
+Action 1: search_users(query="陈伟")
+Action 2: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py 4 5")
 ```
 
-```
-User: 查询陈伟的保单
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userName 陈伟")
-```
+### Query by Pinyin
+
+To find all policies for a user by pinyin:
 
 ```
-User: 查看用户名下所有保单
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userName 用户姓名")
+User: 查看chenwei的保单
+Action 1: search_users(query="chenwei")
+Action 2: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py 4 5")
+```
+
+### Query by Pinyin Initials
+
+To find all policies for a user by pinyin initials:
+
+```
+User: 查看cw的保单
+Action 1: search_users(query="cw")
+Action 2: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py 4 5")
 ```
 
 ### Query by User ID
@@ -53,48 +74,66 @@ To find all policies for a user by their ID:
 
 ```
 User: 查询用户1的保单
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userId 1")
+Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py 1")
+```
+
+### Query Multiple Users
+
+To find policies for multiple users:
+
+```
+User: 查询用户1和2的保单
+Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py 1 2")
 ```
 
 ## Query Flow
 
-### By User Name
+### By User Name (with Fuzzy Search)
 
 ```
-用户输入: "查看陶国军的保单"
+用户输入: "查看陈伟的保单"
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 1: 查询用户信息                     │
-│ GET /api/users/search?name=陶国军       │
-│ 获取用户ID                              │
+│ Step 1: 调用用户信息查询技能            │
+│ search_users(query="陈伟")              │
+│ 返回匹配的用户列表                      │
+│ [{"id": 4, "name": "陈伟"}, ...]        │
 └─────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 2: 查询保单                         │
-│ GET /api/insurance-policies?            │
-│     policyholderId=1                    │
+│ Step 2: 调用保单查询脚本                │
+│ query_policy.py 4 5                     │
+│ 查询所有用户的保单                      │
 └─────────────────────────────────────────┘
     │
     ▼
-返回陶国军的保单信息
+返回所有匹配用户的保单信息
 ```
 
-### By User ID
+### By Pinyin (Fuzzy Search)
 
 ```
-用户输入: "查询用户1的保单"
+用户输入: "查看chenwei的保单"
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ 查询保单                                 │
-│ GET /api/insurance-policies?            │
-│     policyholderId=1                    │
+│ Step 1: 调用用户信息查询技能            │
+│ search_users(query="chenwei")           │
+│ 通过拼音模糊搜索找到用户                │
+│ [{"id": 4, "name": "陈伟"}, ...]        │
 └─────────────────────────────────────────┘
     │
     ▼
-返回用户1的保单信息
+┌─────────────────────────────────────────┐
+│ Step 2: 调用保单查询脚本                │
+│ query_policy.py 4 5                     │
+│ 查询所有用户的保单                      │
+└─────────────────────────────────────────┘
+    │
+    ▼
+返回所有匹配用户的保单信息
 ```
 
 ## Script Parameters
@@ -102,12 +141,13 @@ Action: execute_shell_command(command="python3 skills/insurance-policy-query/scr
 The script accepts the following parameters:
 
 ```
-python3 query_policy.py <query_type> <query_value>
+python3 query_policy.py <user_id1> [user_id2] [user_id3] ...
 ```
 
-Query types:
-- `userName` - Query by user name (first get user ID, then query policies)
-- `userId` - Query by user ID (direct query)
+Examples:
+- `python3 query_policy.py 1` - Query policies for user 1
+- `python3 query_policy.py 1 2 3` - Query policies for users 1, 2, and 3
+- `python3 query_policy.py 4 5` - Query policies for users 4 and 5
 
 ## Response Format
 
@@ -133,10 +173,12 @@ For multiple results, the information is presented as a numbered list.
 The skill uses a layered architecture:
 
 ```
+智能体
+    ↓ 调用
+User Info Skill (search_users)
+    ↓ 返回用户ID列表
 Python Script (query_policy.py)
     ↓ HTTP调用
-User API (GET /api/users/search?name=X)
-    ↓ 获取用户ID
 Insurance Policy API (GET /api/insurance-policies?policyholderId=X)
     ↓
 InsurancePolicyService (Service Layer)
@@ -146,7 +188,13 @@ data/insurance_policies.json (Data File)
 
 ### API Endpoints
 
-- `GET /api/users/search?name={name}` - Search users by name
-- `GET /api/users/{id}` - Get user by ID
 - `GET /api/insurance-policies?policyholderId={id}` - Get policies by policyholder ID
 - `GET /api/insurance-policies/count` - Get total policy count
+
+### User Info Skill
+
+The user information query skill supports:
+- Exact name matching (Chinese characters)
+- Pinyin full match (e.g., "chenwei")
+- Pinyin initial match (e.g., "cw")
+- Fuzzy matching for similar pronunciations
