@@ -1,4 +1,4 @@
-package agent.demo.userinfo.tools;
+package agent.demo.agent.tools;
 
 import agent.demo.userinfo.model.UserInfo;
 import agent.demo.userinfo.service.UserInfoService;

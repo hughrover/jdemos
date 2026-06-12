@@ -108,16 +108,22 @@ public class UserInfoServiceImpl implements UserInfoService {
             results.addAll(exactMatches);
         }
 
-        // 2. 尝试拼音全拼匹配
-        List<UserInfo> pinyinMatches = getCustomersByPinyin(query);
-        if (!pinyinMatches.isEmpty()) {
-            results.addAll(pinyinMatches);
+        // 2. 尝试拼音全拼匹配（先将用户输入转换成拼音）
+        String queryPinyin = PinyinMatcher.getPinyin(query);
+        if (!queryPinyin.isEmpty()) {
+            List<UserInfo> pinyinMatches = getCustomersByPinyin(queryPinyin);
+            if (!pinyinMatches.isEmpty()) {
+                results.addAll(pinyinMatches);
+            }
         }
 
-        // 3. 尝试拼音首字母匹配
-        List<UserInfo> initialMatches = getCustomersByPinyinInitial(query);
-        if (!initialMatches.isEmpty()) {
-            results.addAll(initialMatches);
+        // 3. 尝试拼音首字母匹配（先将用户输入转换成首字母）
+        String queryInitial = PinyinMatcher.getPinyinInitial(query);
+        if (!queryInitial.isEmpty()) {
+            List<UserInfo> initialMatches = getCustomersByPinyinInitial(queryInitial);
+            if (!initialMatches.isEmpty()) {
+                results.addAll(initialMatches);
+            }
         }
 
         // 4. 尝试模糊拼音查询

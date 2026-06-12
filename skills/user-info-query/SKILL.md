@@ -15,28 +15,31 @@ This skill provides functionality to query user information from a database of 1
 - Fuzzy matching for similar pronunciations
 - Smart search that combines all matching methods
 
-## Implementation
+## IMPORTANT: Use UserInfoTool
 
-This skill uses the **UserInfoTool** Java service to perform queries. The tool is registered as a Spring AI ToolCallback and can be called directly by the intelligent agent.
+**You MUST use the UserInfoTool to query user information. Do NOT use any Python scripts.**
 
-### Key Components
+The UserInfoTool is a Java tool that provides all query functionality. It is registered as a Spring AI ToolCallback and can be called directly.
 
-1. **UserInfoTool**: Java tool that wraps UserInfoService
-2. **UserInfoService**: Service with smart search capabilities
-3. **PinyinMatcher**: Handles real-time pinyin conversion and matching
+### How to Call UserInfoTool
 
-### Data Storage
+To query user information, call the `search_users` tool with the query parameter:
 
-Customer data is stored in `data/customers.json` with 1000 simulated customer records. The data does NOT contain pre-stored pinyin fields - pinyin conversion is performed in real-time by the system service.
+```
+search_users(query="陶国军")
+search_users(query="taoguojun")
+search_users(query="zs")
+```
 
-## Usage
+## Usage Examples
 
 ### Query by Chinese Name
 
 To find a user by their Chinese name:
 
 ```
-查询用户：张三
+User: 查询用户陶国军
+Action: search_users(query="陶国军")
 ```
 
 ### Query by Pinyin
@@ -44,7 +47,8 @@ To find a user by their Chinese name:
 To find a user by pinyin:
 
 ```
-查询用户：zhangsan
+User: 查询用户taoguojun
+Action: search_users(query="taoguojun")
 ```
 
 ### Query by Pinyin Initials
@@ -52,7 +56,8 @@ To find a user by pinyin:
 To find a user by pinyin initials:
 
 ```
-查询用户：zs
+User: 查询用户tgj
+Action: search_users(query="tgj")
 ```
 
 ### Fuzzy Search
@@ -60,30 +65,24 @@ To find a user by pinyin initials:
 For fuzzy matching (similar pronunciations):
 
 ```
-查询用户：张山
+User: 查询用户张山
+Action: search_users(query="张山")
 ```
 
 This will match "张三" and other similar names.
 
 ### List All Users
 
-To see all users (limited to first 20 for display):
+To see all users:
 
 ```
-显示所有用户
-```
-
-### Query by ID
-
-To find a user by their ID:
-
-```
-查询用户ID：1
+User: 显示所有用户
+Action: search_users(query="")
 ```
 
 ## Query Logic
 
-The smart search function follows this priority:
+The UserInfoTool's smart search function follows this priority:
 
 1. Exact name match (highest priority)
 2. Pinyin full match
@@ -91,37 +90,21 @@ The smart search function follows this priority:
 4. Fuzzy pinyin match
 5. Fuzzy name match (lowest priority)
 
-## Examples
-
-### Example 1: Exact Match
-**User**: 查询用户张三
-**Result**: Returns user "张三" with full details
-
-### Example 2: Pinyin Match
-**User**: 查询用户zhangsan
-**Result**: Returns all users with pinyin "zhangsan"
-
-### Example 3: Fuzzy Match
-**User**: 查询用户张山
-**Result**: Returns "张三" and other similar names
-
-### Example 4: Initials Match
-**User**: 查询用户zs
-**Result**: Returns all users with initials "zs"
-
 ## Response Format
 
-The skill returns user information in the following format:
+The tool returns user information in the following format:
 
 ```
-姓名：张三
-年龄：28
+找到 1 个匹配的用户：
+
+姓名：陶国军
+年龄：23
 性别：男
-电话：13800138000
-邮箱：zhangsan@qq.com
-地址：北京市朝阳区街道1号
-公司：阿里巴巴
-职位：软件工程师
+电话：13355893226
+邮箱：taoguojun1@qq.com
+地址：长春市西城区街道57号
+公司：美团
+职位：人力资源经理
 ```
 
 For multiple results, the information is presented as a numbered list.
