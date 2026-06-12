@@ -24,7 +24,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 
 @SpringBootApplication
-@ComponentScan(basePackages = {"agent.demo.agent", "agent.demo.userinfo"})
+@ComponentScan(basePackages = {"agent.demo.agent", "agent.demo.userinfo", "agent.demo.insurance"})
 public class ChatbotApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(ChatbotApplication.class, args);

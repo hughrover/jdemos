@@ -52,15 +52,15 @@ public class ChatbotAgent {
 			ToolCallback searchUsers,
 			SkillRegistry skillRegistry,
 			MemorySaver memorySaver) {
-		
+
 		SkillsAgentHook skillsHook = SkillsAgentHook.builder()
 				.skillRegistry(skillRegistry)
 				.build();
-		
+
 		ShellToolAgentHook shellHook = ShellToolAgentHook.builder()
 				.shellToolName(executeShellCommand.getToolDefinition().name())
 				.build();
-		
+
 		return ReactAgent.builder()
 				.name("小蓝")
 				.model(chatModel)
