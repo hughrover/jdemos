@@ -1,17 +1,16 @@
 ---
 name: insurance-policy-query
-description: Use this skill when the user wants to query insurance policy information. This includes searching by policy ID, policyholder name, or user ID. If the user mentions looking up insurance policy, checking policy details, or querying policy information, use this skill.
+description: Use this skill when the user wants to query insurance policy information. This includes searching by user name or user ID. If the user mentions looking up insurance policy, checking policy details, or querying policy information, use this skill.
 ---
 
 # Insurance Policy Query Guide
 
 ## Overview
 
-This skill provides functionality to query insurance policy information from a database of 2023 policy records. It supports:
+This skill provides functionality to query insurance policy information. The query process is:
 
-- Query by policy ID (e.g., "P000001")
-- Query by policyholder name (e.g., "陶国军")
-- Query by user ID
+1. First, get the user ID by user name (using user query API)
+2. Then, query insurance policies by user ID
 
 ## IMPORTANT: Use Python Script
 
@@ -29,32 +28,23 @@ execute_shell_command(command="python3 skills/insurance-policy-query/scripts/que
 
 ## Usage Examples
 
-### Query by Policy ID
+### Query by User Name
 
-To find a policy by its ID:
-
-```
-User: 查询保单P000001
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py policyId P000001")
-```
-
-### Query by Policyholder Name
-
-To find all policies for a policyholder:
+To find all policies for a user by their name:
 
 ```
-User: 查询陶国军的保单
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py policyholderName 陶国军")
+User: 查看陶国军的保单
+Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userName 陶国军")
 ```
 
 ```
-User: 查看陈伟的保单
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py policyholderName 陈伟")
+User: 查询陈伟的保单
+Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userName 陈伟")
 ```
 
 ```
-User: 查询用户名下所有保单
-Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py policyholderName 用户姓名")
+User: 查看用户名下所有保单
+Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userName 用户姓名")
 ```
 
 ### Query by User ID
@@ -66,6 +56,47 @@ User: 查询用户1的保单
 Action: execute_shell_command(command="python3 skills/insurance-policy-query/scripts/query_policy.py userId 1")
 ```
 
+## Query Flow
+
+### By User Name
+
+```
+用户输入: "查看陶国军的保单"
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ Step 1: 查询用户信息                     │
+│ GET /api/users/search?name=陶国军       │
+│ 获取用户ID                              │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ Step 2: 查询保单                         │
+│ GET /api/insurance-policies?            │
+│     policyholderId=1                    │
+└─────────────────────────────────────────┘
+    │
+    ▼
+返回陶国军的保单信息
+```
+
+### By User ID
+
+```
+用户输入: "查询用户1的保单"
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 查询保单                                 │
+│ GET /api/insurance-policies?            │
+│     policyholderId=1                    │
+└─────────────────────────────────────────┘
+    │
+    ▼
+返回用户1的保单信息
+```
+
 ## Script Parameters
 
 The script accepts the following parameters:
@@ -75,9 +106,8 @@ python3 query_policy.py <query_type> <query_value>
 ```
 
 Query types:
-- `policyId` - Query by policy ID (e.g., "P000001")
-- `policyholderName` - Query by policyholder name (e.g., "陶国军", "陈伟")
-- `userId` - Query by user ID (e.g., "1")
+- `userName` - Query by user name (first get user ID, then query policies)
+- `userId` - Query by user ID (direct query)
 
 ## Response Format
 
@@ -105,20 +135,18 @@ The skill uses a layered architecture:
 ```
 Python Script (query_policy.py)
     ↓ HTTP调用
-InsurancePolicyController (REST API)
+User API (GET /api/users/search?name=X)
+    ↓ 获取用户ID
+Insurance Policy API (GET /api/insurance-policies?policyholderId=X)
     ↓
 InsurancePolicyService (Service Layer)
     ↓
 data/insurance_policies.json (Data File)
 ```
 
-### Data Storage
+### API Endpoints
 
-Policy data is stored in `data/insurance_policies.json` with 2023 policy records. Each policy is associated with a user from `data/customers.json` via `policyholderId`.
-
-### REST API Endpoints
-
-- `GET /api/insurance-policies/{policyId}` - Get policy by ID
-- `GET /api/insurance-policies?policyholderName={name}` - Get policies by policyholder name
-- `GET /api/insurance-policies?userId={userId}` - Get policies by user ID
+- `GET /api/users/search?name={name}` - Search users by name
+- `GET /api/users/{id}` - Get user by ID
+- `GET /api/insurance-policies?policyholderId={id}` - Get policies by policyholder ID
 - `GET /api/insurance-policies/count` - Get total policy count

@@ -21,32 +21,13 @@ public class InsurancePolicyController {
     }
 
     /**
-     * 根据保单号查询保单
-     * GET /api/insurance-policies/{policyId}
-     */
-    @GetMapping("/{policyId}")
-    public InsurancePolicy getPolicyById(@PathVariable String policyId) {
-        return insurancePolicyService.getPolicyById(policyId);
-    }
-
-    /**
-     * 根据投保人姓名查询保单
-     * GET /api/insurance-policies?policyholderName={name}
+     * 根据policyholderId查询保单
+     * GET /api/insurance-policies?policyholderId={id}
      */
     @GetMapping
-    public List<InsurancePolicy> getPolicies(
-            @RequestParam(required = false) String policyholderName,
-            @RequestParam(required = false) Long userId) {
-
-        if (policyholderName != null && !policyholderName.isEmpty()) {
-            return insurancePolicyService.getPoliciesByPolicyholderName(policyholderName);
-        }
-
-        if (userId != null) {
-            return insurancePolicyService.getPoliciesByUserId(userId);
-        }
-
-        return insurancePolicyService.getAllPolicies();
+    public List<InsurancePolicy> getPoliciesByPolicyholderId(
+            @RequestParam Long policyholderId) {
+        return insurancePolicyService.getPoliciesByPolicyholderId(policyholderId);
     }
 
     /**

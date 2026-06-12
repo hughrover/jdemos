@@ -59,30 +59,10 @@ public class InsurancePolicyServiceImpl implements InsurancePolicyService {
     }
 
     @Override
-    public InsurancePolicy getPolicyById(String policyId) {
+    public List<InsurancePolicy> getPoliciesByPolicyholderId(Long policyholderId) {
         return policies.stream()
-                .filter(policy -> policy.getPolicyId().equals(policyId))
-                .findFirst()
-                .orElse(null);
-    }
-
-    @Override
-    public List<InsurancePolicy> getPoliciesByPolicyholderName(String policyholderName) {
-        return policies.stream()
-                .filter(policy -> policy.getPolicyholderName().equals(policyholderName))
+                .filter(policy -> policy.getPolicyholderId().equals(policyholderId))
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<InsurancePolicy> getPoliciesByUserId(Long userId) {
-        return policies.stream()
-                .filter(policy -> policy.getPolicyholderId().equals(userId))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<InsurancePolicy> getAllPolicies() {
-        return new ArrayList<>(policies);
     }
 
     @Override
