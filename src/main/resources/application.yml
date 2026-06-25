@@ -10,9 +10,10 @@ spring:
 
 tencent:
   search:
-    api-key: ${TENCENT_WSA_API_KEY}
-    endpoint: https://api.wsa.cloud.tencent.com/SearchPro
+    endpoint: https://wsa.tencentcloudapi.com
     timeout: 5000
+    secret-id: ${TENCENT_API_SECRET_ID:}
+    secret-key: ${TENCENT_API_SECRET_KEY:}
 
 server:
   port: 8080

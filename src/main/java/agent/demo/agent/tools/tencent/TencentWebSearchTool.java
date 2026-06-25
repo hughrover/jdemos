@@ -1,4 +1,4 @@
-package agent.demo.agent.tools;
+package agent.demo.agent.tools.tencent;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,15 +19,12 @@ import java.util.function.Function;
  * 腾讯联网搜索工具
  * 封装腾讯云联网搜索API（SearchPro），为智能体提供实时网络搜索能力
  *
- * <p>使用示例：
- * <pre>{@code
- * SearchRequest request = new SearchRequest("今天北京的天气");
- * String result = tencentWebSearchTool.apply(request);
- * }</pre>
+ * <p>使用标准云API 3.0的TC3-HMAC-SHA256签名方式鉴权
  *
  * <p>环境变量配置：
  * <ul>
- *   <li>TENCENT_WSA_API_KEY - 格式：SecretId#SecretKey</li>
+ *   <li>TENCENT_API_SECRET_ID - 腾讯云API SecretId</li>
+ *   <li>TENCENT_API_SECRET_KEY - 腾讯云API SecretKey</li>
  * </ul>
  *
  * @author Diego
@@ -40,24 +37,40 @@ public class TencentWebSearchTool implements Function<TencentWebSearchTool.Searc
     private static final Logger log = LoggerFactory.getLogger(TencentWebSearchTool.class);
     private static final String API_ACTION = "SearchPro";
     private static final String API_VERSION = "2025-05-08";
+    private static final String HOST = "wsa.tencentcloudapi.com";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-    private final TencentCloudSigner signer;
+    private TencentCloudSigner signer;
     private final String endpoint;
 
     public TencentWebSearchTool(
             RestTemplateBuilder restTemplateBuilder,
             ObjectMapper objectMapper,
-            @Value("${tencent.search.endpoint:https://api.wsa.cloud.tencent.com/SearchPro}") String endpoint,
-            @Value("${tencent.search.timeout:5000}") int timeout) {
+            @Value("${tencent.search.endpoint:https://wsa.tencentcloudapi.com}") String endpoint,
+            @Value("${tencent.search.timeout:5000}") int timeout,
+            @Value("${tencent.search.secret-id:}") String secretId,
+            @Value("${tencent.search.secret-key:}") String secretKey) {
         this.restTemplate = restTemplateBuilder
                 .connectTimeout(Duration.ofMillis(timeout))
                 .readTimeout(Duration.ofMillis(timeout))
                 .build();
         this.objectMapper = objectMapper;
         this.endpoint = endpoint;
-        this.signer = TencentCloudSigner.fromEnvironment();
+
+        // 优先从配置文件读取，其次从环境变量读取
+        if (secretId != null && !secretId.isEmpty() && secretKey != null && !secretKey.isEmpty()) {
+            this.signer = new TencentCloudSigner(secretId, secretKey);
+            log.info("TencentWebSearchTool initialized with config file credentials");
+        } else {
+            try {
+                this.signer = TencentCloudSigner.fromEnvironment();
+                log.info("TencentWebSearchTool initialized with environment variables");
+            } catch (IllegalArgumentException e) {
+                log.warn("TencentWebSearchTool: {}", e.getMessage());
+                this.signer = null;
+            }
+        }
 
         log.info("TencentWebSearchTool initialized with endpoint: {}", endpoint);
     }
@@ -69,22 +82,36 @@ public class TencentWebSearchTool implements Function<TencentWebSearchTool.Searc
             return "错误：搜索查询不能为空";
         }
 
+        // 验证签名器
+        if (signer == null) {
+            return "错误：TENCENT_API_SECRET_ID 或 TENCENT_API_SECRET_KEY 未配置";
+        }
+
         try {
             // 构建请求体
             String payload = buildPayload(request);
-            log.debug("Search request payload: {}", payload);
+            log.info("===== 腾讯搜索API请求 =====");
+            log.info("请求URL: {}", endpoint);
+            log.info("请求体: {}", payload);
 
             // 生成签名
             long timestamp = TencentCloudSigner.currentTimestamp();
             String authorization = signer.sign(API_ACTION, payload, timestamp);
+            log.info("时间戳: {}", timestamp);
+            log.info("Authorization: {}", authorization);
 
             // 构建HTTP请求
             HttpHeaders headers = buildHeaders(timestamp, authorization);
+            log.info("请求头: {}", headers);
             HttpEntity<String> entity = new HttpEntity<>(payload, headers);
 
             // 发送请求
+            log.info("发送请求...");
             ResponseEntity<String> response = restTemplate.exchange(
                     endpoint, HttpMethod.POST, entity, String.class);
+            log.info("响应状态码: {}", response.getStatusCode());
+            log.info("响应内容: {}", response.getBody());
+            log.info("===== 请求完成 =====");
 
             // 解析响应
             return parseResponse(response.getBody(), request.getQuery());
@@ -106,25 +133,30 @@ public class TencentWebSearchTool implements Function<TencentWebSearchTool.Searc
      */
     private String buildPayload(SearchRequest request) throws JsonProcessingException {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("Action", API_ACTION);
-        payload.put("Version", API_VERSION);
         payload.put("Query", request.getQuery());
 
-        if (request.getMode() != null) {
+        // 可选参数 - 只在有效时添加
+        // Mode: 0-自然搜索，1-多模态VR，2-混合
+        if (request.getMode() != null && (request.getMode() == 0 || request.getMode() == 1 || request.getMode() == 2)) {
             payload.put("Mode", request.getMode());
         }
-        if (request.getCnt() != null) {
+        // Cnt: 只能是10/20/30/40/50
+        if (request.getCnt() != null && (request.getCnt() == 10 || request.getCnt() == 20 ||
+            request.getCnt() == 30 || request.getCnt() == 40 || request.getCnt() == 50)) {
             payload.put("Cnt", request.getCnt());
         }
-        if (request.getFromTime() != null) {
+        // FromTime/ToTime: Unix时间戳，大于0才添加
+        if (request.getFromTime() != null && request.getFromTime() > 0) {
             payload.put("FromTime", request.getFromTime());
         }
-        if (request.getToTime() != null) {
+        if (request.getToTime() != null && request.getToTime() > 0) {
             payload.put("ToTime", request.getToTime());
         }
+        // Site: 站点过滤
         if (request.getSite() != null && !request.getSite().isEmpty()) {
             payload.put("Site", request.getSite());
         }
+        // Industry: gov/news/acad/finance
         if (request.getIndustry() != null && !request.getIndustry().isEmpty()) {
             payload.put("Industry", request.getIndustry());
         }
@@ -133,12 +165,12 @@ public class TencentWebSearchTool implements Function<TencentWebSearchTool.Searc
     }
 
     /**
-     * 构建HTTP请求头
+     * 构建HTTP请求头 - 使用标准云API 3.0方式
      */
     private HttpHeaders buildHeaders(long timestamp, String authorization) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Host", "wsa.tencentcloudapi.com");
+        headers.set("Host", HOST);
         headers.set("X-TC-Action", API_ACTION);
         headers.set("X-TC-Version", API_VERSION);
         headers.set("X-TC-Timestamp", String.valueOf(timestamp));
@@ -163,16 +195,41 @@ public class TencentWebSearchTool implements Function<TencentWebSearchTool.Searc
         }
 
         // 检查错误
-        String error = (String) response.get("Error");
-        if (error != null) {
-            return "API错误：" + error;
+        Object errorObj = response.get("Error");
+        if (errorObj != null) {
+            if (errorObj instanceof Map) {
+                Map<String, Object> errorMap = (Map<String, Object>) errorObj;
+                String code = (String) errorMap.get("Code");
+                String message = (String) errorMap.get("Message");
+                return String.format("API错误：%s - %s", code, message);
+            } else {
+                return "API错误：" + errorObj.toString();
+            }
         }
 
         // 获取结果
-        List<String> pages = (List<String>) response.get("Pages");
+        Object pagesObj = response.get("Pages");
         String requestId = (String) response.get("RequestId");
 
-        if (pages == null || pages.isEmpty()) {
+        if (pagesObj == null) {
+            return String.format("未找到与\"%s\"相关的搜索结果\n请求ID: %s", query, requestId);
+        }
+
+        // 处理Pages - 可能是List<String>或List<Map>
+        List<String> pages = new ArrayList<>();
+        if (pagesObj instanceof List) {
+            List<?> pagesList = (List<?>) pagesObj;
+            for (Object page : pagesList) {
+                if (page instanceof String) {
+                    pages.add((String) page);
+                } else if (page instanceof Map) {
+                    // 将Map转换为JSON字符串
+                    pages.add(objectMapper.writeValueAsString(page));
+                }
+            }
+        }
+
+        if (pages.isEmpty()) {
             return String.format("未找到与\"%s\"相关的搜索结果\n请求ID: %s", query, requestId);
         }
 
@@ -208,14 +265,6 @@ public class TencentWebSearchTool implements Function<TencentWebSearchTool.Searc
 
     /**
      * 搜索请求参数
-     *
-     * @param query    搜索查询（必填）
-     * @param mode     搜索模式：0-自然搜索，1-多模态VR，2-混合（可选）
-     * @param cnt      结果数量：10/20/30/40/50（可选）
-     * @param fromTime 开始时间戳（秒）（可选）
-     * @param toTime   结束时间戳（秒）（可选）
-     * @param site     站点过滤（可选）
-     * @param industry 行业过滤：gov/news/acad/finance（可选）
      */
     public static class SearchRequest {
         private String query;

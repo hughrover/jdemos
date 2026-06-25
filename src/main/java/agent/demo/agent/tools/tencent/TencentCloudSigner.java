@@ -1,4 +1,4 @@
-package agent.demo.agent.tools;
+package agent.demo.agent.tools.tencent;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -48,14 +48,15 @@ public class TencentCloudSigner {
                     .atZone(java.time.ZoneOffset.UTC)
                     .toLocalDate()
                     .toString();
-            String stringToSign = buildStringToSign(canonicalRequest, timestamp, date);
+            String credentialScope = date + "/" + SERVICE + "/tc3_request";
+            String stringToSign = buildStringToSign(canonicalRequest, timestamp, credentialScope);
 
             // 3. 计算签名
             String signature = calculateSignature(stringToSign, date);
 
             // 4. 拼接Authorization
             return String.format("%s Credential=%s/%s, SignedHeaders=content-type;host, Signature=%s",
-                    ALGORITHM, secretId, date + "/" + SERVICE, signature);
+                    ALGORITHM, secretId, credentialScope, signature);
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to sign request: " + e.getMessage(), e);
@@ -64,27 +65,33 @@ public class TencentCloudSigner {
 
     /**
      * 构建规范请求串
+     * 参考Python实现，确保格式一致
      */
     private String buildCanonicalRequest(String action, String payload, long timestamp) {
         String httpRequestMethod = "POST";
         String canonicalUri = "/";
         String canonicalQueryString = "";
-        String canonicalHeaders = String.format("content-type:application/json\nhost:%s\n", HOST);
+        // canonical headers格式：每行以换行符结尾
+        String canonicalHeaders = "content-type:application/json\nhost:" + HOST + "\n";
+        String signedHeaders = "content-type;host";
 
         // 对payload进行SHA256哈希
         String payloadHash = sha256Hex(payload);
 
-        return String.format("%s\n%s\n%s\n%s\n%s",
-                httpRequestMethod, canonicalUri, canonicalQueryString,
-                canonicalHeaders, "content-type;host", payloadHash);
+        // 拼接规范请求串
+        // 格式：HTTP方法\nURI\n查询字符串\nHeaders\n签名Headers\nPayload哈希
+        return httpRequestMethod + "\n" +
+               canonicalUri + "\n" +
+               canonicalQueryString + "\n" +
+               canonicalHeaders + "\n" +  // canonicalHeaders已包含末尾换行，再加一个换行形成空行
+               signedHeaders + "\n" +
+               payloadHash;
     }
 
     /**
      * 构建待签名字符串
      */
-    private String buildStringToSign(String canonicalRequest, long timestamp, String date) {
-        String serviceDate = date;
-        String credentialScope = serviceDate + "/" + SERVICE + "/tc3_request";
+    private String buildStringToSign(String canonicalRequest, long timestamp, String credentialScope) {
         String hashedCanonicalRequest = sha256Hex(canonicalRequest);
 
         return String.format("%s\n%d\n%s\n%s",
@@ -145,22 +152,24 @@ public class TencentCloudSigner {
 
     /**
      * 从环境变量读取SecretId和SecretKey
-     * TENCENT_WSA_API_KEY格式: SecretId#SecretKey
+     * 环境变量：
+     * - TENCENT_API_SECRET_ID: 腾讯云API的SecretId
+     * - TENCENT_API_SECRET_KEY: 腾讯云API的SecretKey
      *
      * @return TencentCloudSigner实例
-     * @throws IllegalArgumentException 如果环境变量未设置或格式错误
+     * @throws IllegalArgumentException 如果环境变量未设置
      */
     public static TencentCloudSigner fromEnvironment() {
-        String apiKey = System.getenv("TENCENT_WSA_API_KEY");
-        if (apiKey == null || apiKey.isEmpty()) {
-            throw new IllegalArgumentException("环境变量 TENCENT_WSA_API_KEY 未设置");
+        String secretId = System.getenv("TENCENT_API_SECRET_ID");
+        if (secretId == null || secretId.isEmpty()) {
+            throw new IllegalArgumentException("环境变量 TENCENT_API_SECRET_ID 未设置");
         }
 
-        String[] parts = apiKey.split("#", 2);
-        if (parts.length != 2) {
-            throw new IllegalArgumentException("环境变量 TENCENT_WSA_API_KEY 格式错误，应为 SecretId#SecretKey");
+        String secretKey = System.getenv("TENCENT_API_SECRET_KEY");
+        if (secretKey == null || secretKey.isEmpty()) {
+            throw new IllegalArgumentException("环境变量 TENCENT_API_SECRET_KEY 未设置");
         }
 
-        return new TencentCloudSigner(parts[0], parts[1]);
+        return new TencentCloudSigner(secretId, secretKey);
     }
 }

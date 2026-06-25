@@ -1,5 +1,9 @@
 package agent.demo.agent.tools;
 
+import agent.demo.agent.tools.tencent.SearchResponse;
+import agent.demo.agent.tools.tencent.SearchResult;
+import agent.demo.agent.tools.tencent.TencentCloudSigner;
+import agent.demo.agent.tools.tencent.TencentWebSearchTool;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

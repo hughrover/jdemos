@@ -17,6 +17,7 @@ package agent.demo.agent;
 
 import agent.demo.agent.tools.PythonTool;
 import agent.demo.agent.tools.UserInfoTool;
+import agent.demo.agent.tools.tencent.TencentWebSearchTool;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.shelltool.ShellToolAgentHook;
 import com.alibaba.cloud.ai.graph.agent.hook.skills.SkillsAgentHook;
@@ -54,6 +55,7 @@ public class ChatbotAgent {
 			ToolCallback executePythonCode,
 			ToolCallback viewTextFile,
 			ToolCallback searchUsers,
+			ToolCallback tencentWebSearch,
 			SkillRegistry skillRegistry,
 			MemorySaver memorySaver) {
 
@@ -76,7 +78,8 @@ public class ChatbotAgent {
 						executeShellCommand,
 						executePythonCode,
 						viewTextFile,
-						searchUsers
+						searchUsers,
+						tencentWebSearch
 				)
 				.build();
 	}
@@ -136,6 +139,15 @@ public class ChatbotAgent {
 		return FunctionToolCallback.builder("search_users", userInfoTool)
 				.description("查询用户信息。支持中文姓名、拼音、首字母等多种查询方式。例如：查询'张三'、'zhangsan'、'zs'都可以找到对应的用户。")
 				.inputType(UserInfoTool.SearchRequest.class)
+				.build();
+	}
+
+	// Tool: tencent_web_search
+	@Bean
+	public ToolCallback tencentWebSearch(TencentWebSearchTool tencentWebSearchTool) {
+		return FunctionToolCallback.builder("tencent_web_search", tencentWebSearchTool)
+				.description("腾讯联网搜索工具。用于搜索实时网络信息，如新闻、知识、数据等。支持自然语言查询，返回标题、摘要、链接等结构化结果。")
+				.inputType(TencentWebSearchTool.SearchRequest.class)
 				.build();
 	}
 }
