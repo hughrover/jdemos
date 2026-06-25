@@ -15,6 +15,8 @@
  */
 package agent.demo.agent;
 
+import agent.demo.agent.debug.ResponseDebugInterceptor;
+import agent.demo.agent.dedup.ResponseDeduplicationInterceptor;
 import agent.demo.agent.tools.PythonTool;
 import agent.demo.agent.tools.UserInfoTool;
 import agent.demo.agent.tools.tencent.TencentWebSearchTool;
@@ -47,6 +49,8 @@ public class ChatbotAgent {
 			- 每次只执行一个步骤，不要重复已经完成的步骤
 			- 如果工具返回了结果，直接基于结果回答，不要重新调用同一个工具
 			- 如果你发现无法完成任务，直接告诉用户，不要反复尝试
+			- 执行中间步骤（如读取技能、搜索等）时，不要展示原始结果给用户
+			- 只在最后一次性呈现整合后的最终报告，不要重复展示中间过程的数据
 			""";
 
 	@Bean
@@ -74,6 +78,7 @@ public class ChatbotAgent {
 				.enableLogging(true)
 				.saver(memorySaver)
 				.hooks(List.of(skillsHook, shellHook))
+				.interceptors(new ResponseDebugInterceptor(), new ResponseDeduplicationInterceptor())
 				.tools(
 						executeShellCommand,
 						executePythonCode,
