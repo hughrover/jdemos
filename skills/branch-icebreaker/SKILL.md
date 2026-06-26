@@ -1,116 +1,126 @@
 ---
 name: branch-icebreaker
-description: Use this skill when the user wants to prepare icebreaker topics and scripts for visiting a bank branch. This includes generating conversation topics, talking points, and structured scripts for customer managers or insurance agents to break the ice with branch staff. If the user mentions icebreaker, conversation topics, talking points, branch visit preparation, or wants to know what to talk about when visiting a branch, use this skill.
+description: 当用户需要准备银行网点破冰话术时使用此技能。适用于银行保险客户经理或代理人拜访网点前，生成聊天话题、谈话要点和结构化话术脚本。当用户提到破冰话术、聊天话题、谈话要点、网点拜访准备、拜访银行聊什么等内容时，触发此技能。
 ---
 
-# Branch Icebreaker Script Guide
+# 银行网点破冰话术指南
 
-## Overview
+## 概述
 
-This skill generates icebreaker topics and conversation scripts for bank branch visits, integrating:
-1. **Financial News** - Fund, wealth management, insurance, stock, and real estate market dynamics
-2. **Banking Industry Updates** - Policy changes, interest rates, new products
-3. **Local News** - Community, commercial district, and transportation updates
-4. **Topic Extraction** - Identify 3-5 conversation-worthy topics from search results
-5. **Script Generation** - Create three-part scripts: opening line, deep dive, response guide
+本技能为银行保险客户经理/代理人生成网点破冰话题和话术脚本，**以网点周边区域的热点新闻和事件为核心素材**，整合：
+1. **网点周边热点** — 商圈动态、社区新闻、交通建设、本地企业活动（主要话题来源）
+2. **银行保险政策动态** — 银保监会政策、利率调整、保险产品监管
+3. **代销产品市场** — 银行代销保险与理财产品动态、收益趋势
+4. **保险产品资讯** — 产品创新、理赔趋势、客户保障需求
+5. **客户经营与渠道合作** — 客户经理经验、银保渠道合作模式
 
-Supported banks: 浦发银行, 工商银行, 建设银行, 中国银行, 农业银行, 招商银行, etc.
+支持银行：浦发银行、工商银行、建设银行、中国银行、农业银行、招商银行等。
 
-## IMPORTANT: Use Tencent Web Search Tool
+## 重要说明：使用腾讯网络搜索工具
 
-**You MUST use the `tencent_web_search` tool to gather information. Do NOT create separate tools or scripts.**
+**必须使用 `tencent_web_search` 工具进行信息采集，不要创建单独的工具或脚本。**
 
-The skill works by making multiple targeted web searches, extracting hot topics, and generating conversation scripts.
+本技能通过执行多次定向网络搜索、提炼热点话题并生成话术脚本来工作。
 
-## Step-by-Step Process
+## 操作步骤
 
-### Step 1: Extract Branch Information
+### 第一步：提取网点信息
 
-Parse the user's input to extract:
-- **Bank name** (银行名称): e.g., 浦发银行, 工商银行
-- **City** (城市): e.g., 上海, 北京
-- **Branch name** (网点名称): e.g., 制造局路支行, 朝阳支行
+从用户输入中解析以下信息：
+- **银行名称**：如浦发银行、工商银行
+- **城市**：如上海、北京
+- **网点名称**：如制造局路支行、朝阳支行
 
 ```
-User: 帮我准备浦发银行上海制造局路支行的破冰话术
-Extract: bank="浦发银行", city="上海", branch="制造局路支行"
+用户：帮我准备浦发银行上海制造局路支行的破冰话术
+提取：bank="浦发银行", city="上海", branch="制造局路支行"
 
-User: 我要去拜访北京工商银行朝阳支行，准备点聊天话题
-Extract: bank="工商银行", city="北京", branch="朝阳支行"
+用户：我要去拜访北京工商银行朝阳支行，准备点聊天话题
+提取：bank="工商银行", city="北京", branch="朝阳支行"
 ```
 
-### Step 2: Gather Data via Web Search
+### 第二步：联网搜索资讯
 
-Make **5 parallel searches** using `tencent_web_search`:
+使用 `tencent_web_search` 执行 **5 次并行搜索**：
 
-#### Search 1: Banking Industry Updates
+#### 搜索 1：银行保险政策与监管动态
 ```
-tencent_web_search(query="{city} {bank} 银行 政策 利率 新产品 业务动态")
+tencent_web_search(query="{city} 银行保险 政策 监管 利率 新规")
 ```
-Example: `tencent_web_search(query="上海 浦发银行 银行 政策 利率 新产品 业务动态")`
+示例：`tencent_web_search(query="上海 银行保险 政策 监管 利率 新规")`
 
-#### Search 2: Local News
+#### 搜索 2：网点周边热点新闻与事件（重点搜索）
 ```
-tencent_web_search(query="{city} 社区 商圈 交通 新闻 周边")
+tencent_web_search(query="{city} {branch} 热点 新闻 事件 商圈 建设 活动")
 ```
-Example: `tencent_web_search(query="上海 社区 商圈 交通 新闻 周边")`
+示例：`tencent_web_search(query="上海 制造局路 热点 新闻 事件 商圈 建设 活动")`
 
-#### Search 3: Fund & Wealth Management
+**说明**：此搜索维度是话术的核心素材来源，优先提取网点所在区域的具体新闻和事件。
+
+#### 搜索 3：银行代销保险与理财产品
 ```
-tencent_web_search(query="{city} 基金 理财 市场 动态 收益")
+tencent_web_search(query="{city} {bank} 代销 保险 理财 产品 收益")
 ```
-Example: `tencent_web_search(query="上海 基金 理财 市场 动态 收益")`
+示例：`tencent_web_search(query="上海 浦发银行 代销 保险 理财 产品 收益")`
 
-#### Search 4: Insurance Industry
+#### 搜索 4：保险产品与理赔动态
 ```
-tencent_web_search(query="{city} 保险 行业 资讯 产品 理赔")
+tencent_web_search(query="{city} 保险 产品 理赔 趋势 保障 需求")
 ```
-Example: `tencent_web_search(query="上海 保险 行业 资讯 产品 理赔")`
+示例：`tencent_web_search(query="上海 保险 产品 理赔 趋势 保障 需求")`
 
-#### Search 5: Stock & Real Estate
+#### 搜索 5：客户经营与银保渠道合作
 ```
-tencent_web_search(query="{city} 股票 房产 市场 热点 投资")
+tencent_web_search(query="{city} 银保 渠道 合作 客户经理 经营 策略")
 ```
-Example: `tencent_web_search(query="上海 股票 房产 市场 热点 投资")`
+示例：`tencent_web_search(query="上海 银保 渠道 合作 客户经理 经营 策略")`
 
-### Step 3: Extract Hot Topics
+### 第三步：提炼热点话题
 
-Analyze the search results and identify **3-5 conversation-worthy topics**:
+分析搜索结果，提炼 **3-5 个破冰话题方向**，**优先围绕网点周边区域的热点新闻和事件**：
 
-1. **Scan for high-frequency keywords** - Words that appear across multiple search results
-2. **Identify trending events** - Recent news or policy changes
-3. **Look for local relevance** - Topics specific to the city or branch location
-4. **Consider practical value** - Topics that can lead to meaningful conversations
+1. **优先提取本地热点** — 网点所在区域（商圈、社区、街道）的近期新闻、活动、变化
+2. **关联业务场景** — 将本地热点与银行保险业务建立关联（如商圈开业→商户保险需求、社区活动→居民理财需求）
+3. **识别行业动态** — 银保政策、产品创新等行业话题作为补充
+4. **评估实用价值** — 能引发网点 staff 共鸣、自然展开对话的话题
 
-For each topic, create:
-- **Topic name** (话题名称): 10 characters or less
-- **Topic description** (话题简介): 50 characters or less
+**关键原则**：每个话题都应有具体的本地事件或数据支撑，避免泛泛而谈的行业话题。
 
-### Step 4: Generate Conversation Scripts
+为每个话题创建：
+- **话题名称**（10 字以内）
+- **话题简介**（50 字以内）
+- **本地关联点**：该话题与网点周边区域的具体关联（如涉及的商圈名称、社区活动、道路建设等）
 
-For each topic, create a **three-part script**:
+### 第四步：生成话术脚本
 
-#### Opening Line (开场白)
-- 1-2 sentences
-- Naturally introduce the topic
-- Show you're informed and professional
+为每个话题生成 **三段式话术**，体现银行保险客户经理/代理人的专业角色定位：
 
-#### Deep Dive (深入探讨)
-- 2-3 sentences
-- Demonstrate expertise
-- Share relevant insights or data points
-- Spark the other person's interest
+#### 开场白
+- 1-2 句话
+- **以网点周边的热点事件或新闻作为切入点**，自然引入话题
+- 体现对本地区域的关注和了解
 
-#### Response Guide (回应引导)
-- 1-2 sentences
-- Ask an open-ended question
-- Encourage the other person to share their views
+#### 深入探讨
+- 2-3 句话
+- 将本地热点与银保业务建立关联
+- 分享对客户需求的洞察或行业数据
+- 引发对方兴趣，体现合作价值
 
-**Length Control**: Each part should NOT exceed 100 characters.
+#### 回应引导
+- 1-2 句话
+- 围绕本地事件带来的业务机会提出开放式问题
+- 鼓励对方分享对本地市场的观察和经验
 
-### Step 5: Generate the Report
+**长度控制**：每段话术不超过 100 字。
 
-Compile everything into a structured Markdown report:
+**话术示例风格**：
+- ✅ "最近制造局路那边新开了个商业广场，您这边商户开户和保险需求应该不少吧？"
+- ✅ "听说黄浦区在推社区养老，这对咱们银保渠道的养老保险业务是个机会。"
+- ❌ "最近银保政策有变化，您怎么看？"（过于泛泛，缺乏本地关联）
+
+### 第五步：生成报告
+
+将所有内容整理为结构化 Markdown 报告：
 
 ```markdown
 # 破冰话术：{bank}{branch}
@@ -121,120 +131,126 @@ Compile everything into a structured Markdown report:
 - **城市**: {city}
 
 ## 💡 话题方向
-1. **{Topic 1 Name}** - {Topic 1 Description}
-2. **{Topic 2 Name}** - {Topic 2 Description}
-3. **{Topic 3 Name}** - {Topic 3 Description}
+1. **{话题1名称}** - {话题1简介}
+   - 本地关联：{本地关联点}
+2. **{话题2名称}** - {话题2简介}
+   - 本地关联：{本地关联点}
+3. **{话题3名称}** - {话题3简介}
+   - 本地关联：{本地关联点}
 
 ## 🗣️ 话术脚本
 
-### 话题 1：{Topic 1 Name}
+### 话题 1：{话题1名称}
 
 **开场白**
-> {Opening line for Topic 1}
+> {话题1开场白}
 
 **深入探讨**
-> {Deep dive for Topic 1}
+> {话题1深入探讨}
 
 **回应引导**
-> {Response guide for Topic 1}
+> {话题1回应引导}
 
-### 话题 2：{Topic 2 Name}
+### 话题 2：{话题2名称}
 
 **开场白**
-> {Opening line for Topic 2}
+> {话题2开场白}
 
 **深入探讨**
-> {Deep dive for Topic 2}
+> {话题2深入探讨}
 
 **回应引导**
-> {Response guide for Topic 2}
+> {话题2回应引导}
 
-### 话题 3：{Topic 3 Name}
+### 话题 3：{话题3名称}
 
 **开场白**
-> {Opening line for Topic 3}
+> {话题3开场白}
 
 **深入探讨**
-> {Deep dive for Topic 3}
+> {话题3深入探讨}
 
 **回应引导**
-> {Response guide for Topic 3}
+> {话题3回应引导}
 
 ## 📝 使用建议
-1. **自然引入**：从开场白开始，自然地引入话题
-2. **展示专业**：在深入探讨环节展示您的专业度
-3. **引导互动**：用回应引导鼓励对方参与讨论
-4. **灵活调整**：根据对方反应灵活调整话术
-5. **真诚交流**：保持真诚的态度，不要过于机械
+1. **本地优先**：优先使用网点周边的热点新闻和事件作为话题切入点
+2. **自然引入**：从开场白开始，自然地引入话题，避免生硬
+3. **展示专业**：在深入探讨环节展示您的银保行业专业度
+4. **引导互动**：用回应引导鼓励对方分享对本地市场的观察
+5. **灵活调整**：根据对方反应灵活调整话术
+6. **真诚交流**：保持真诚的态度，不要过于机械
 
 ---
 *数据来源：实时网络搜索，仅供参考*
-*生成时间：{current date}*
+*生成时间：{date}*
+
+**重要**：生成报告时，必须先运行 `date +"%Y年%m月%d日"` 获取当前日期，然后替换报告中的 `{date}`。不要猜测或使用训练数据中的日期。
 ```
 
-## Usage Examples
+## 使用示例
 
-### Full Icebreaker Script
-
-```
-User: 帮我准备浦发银行上海制造局路支行的破冰话术
-Action 1: tencent_web_search(query="上海 浦发银行 银行 政策 利率 新产品 业务动态")
-Action 2: tencent_web_search(query="上海 社区 商圈 交通 新闻 周边")
-Action 3: tencent_web_search(query="上海 基金 理财 市场 动态 收益")
-Action 4: tencent_web_search(query="上海 保险 行业 资讯 产品 理赔")
-Action 5: tencent_web_search(query="上海 股票 房产 市场 热点 投资")
-→ Extract topics → Generate scripts → Compile report
-```
-
-### Topic Ideas Only
+### 完整破冰话术脚本
 
 ```
-User: 最近有什么可以聊的金融话题？
-Action: tencent_web_search(query="上海 金融 市场 热点 话题")
-→ Extract and list 3-5 conversation topics
+用户：帮我准备浦发银行上海制造局路支行的破冰话术
+步骤1：tencent_web_search(query="上海 银行保险 政策 监管 利率 新规")
+步骤2：tencent_web_search(query="上海 制造局路支行 社区 商圈 周边 新闻")
+步骤3：tencent_web_search(query="上海 浦发银行 代销 保险 理财 产品 收益")
+步骤4：tencent_web_search(query="上海 保险 产品 理赔 趋势 保障 需求")
+步骤5：tencent_web_search(query="上海 银保 渠道 合作 客户经理 经营 策略")
+→ 提炼话题 → 生成话术 → 整理报告
 ```
 
-### Specific Topic Script
+### 仅获取话题方向
 
 ```
-User: 帮我准备关于基金定投的话术
-Action: tencent_web_search(query="基金定投 收益 策略 市场 动态")
-→ Generate detailed script for fund investment topic
+用户：最近有什么可以聊的银保话题？
+步骤：tencent_web_search(query="上海 银保 合作 保险 产品 热点 话题")
+→ 提炼并列出 3-5 个话题方向
 ```
 
-## Query Flow
+### 特定话题话术
+
+```
+用户：帮我准备关于代销保险产品的话术
+步骤：tencent_web_search(query="银行 代销 保险 产品 热销 趋势 策略")
+→ 生成该话题的详细话术脚本
+```
+
+## 查询流程
 
 ```
 用户输入: "帮我准备浦发银行上海制造局路支行的破冰话术"
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 1: 提取网点信息                    │
+│ 第一步：提取网点信息                    │
 │ bank="浦发银行", city="上海",           │
 │ branch="制造局路支行"                   │
 └─────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 2: 并行执行5个搜索                 │
-│ 1. 银行业务动态                         │
-│ 2. 地区周边新闻                         │
-│ 3. 基金理财市场                         │
-│ 4. 保险行业资讯                         │
-│ 5. 股票房产市场                         │
+│ 第二步：并行执行5次搜索                 │
+│ 1. 银行保险政策与监管动态               │
+│ 2. 网点周边热点新闻与事件（重点）       │
+│ 3. 银行代销保险与理财产品               │
+│ 4. 保险产品与理赔动态                   │
+│ 5. 客户经营与银保渠道合作               │
 └─────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 3: 提炼3-5个话题方向               │
-│ - 高频关键词提取                        │
-│ - 热点事件识别                          │
-│ - 本地相关性筛选                        │
+│ 第三步：提炼3-5个话题方向               │
+│ - 优先提取本地热点新闻/事件             │
+│ - 关联业务场景                          │
+│ - 行业动态补充                          │
 └─────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 4: 为每个话题生成三段式话术        │
+│ 第四步：为每个话题生成三段式话术        │
 │ - 开场白（1-2句）                       │
 │ - 深入探讨（2-3句）                     │
 │ - 回应引导（1-2句）                     │
@@ -242,7 +258,7 @@ Action: tencent_web_search(query="基金定投 收益 策略 市场 动态")
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 5: 生成Markdown格式报告            │
+│ 第五步：生成Markdown格式报告            │
 │ - 网点信息                              │
 │ - 话题方向列表                          │
 │ - 话术脚本详情                          │
@@ -253,69 +269,72 @@ Action: tencent_web_search(query="基金定投 收益 策略 市场 动态")
 返回Markdown格式的破冰话术报告
 ```
 
-## Topic Categories
+## 话题类别
 
-When extracting topics, consider these categories:
+提炼话题时，参考以下类别，**优先从"本地热点"类别提取话题**：
 
-### 1. 银行动态 (Banking Updates)
-- Interest rate changes
-- New product launches
-- Policy adjustments
-- Service innovations
+### 1. 本地热点（优先）
+- 网点周边商圈开业、改造、活动
+- 社区新闻（学校、医院、公园等公共设施变化）
+- 道路交通建设与变化
+- 本地企业动态与招商引资
+- 社区活动与民生新闻
 
-### 2. 金融市场 (Financial Markets)
-- Fund performance
-- Wealth management trends
-- Investment opportunities
-- Market outlook
+### 2. 银保合作
+- 银行与保险公司渠道合作模式
+- 代销业务政策与激励机制
+- 银保联合营销活动
 
-### 3. 保险资讯 (Insurance News)
-- New insurance products
-- Industry policy changes
-- Claims trends
-- Customer needs
+### 3. 保险产品
+- 新上市保险产品
+- 热销产品与客户反馈
+- 产品创新趋势
 
-### 4. 房产市场 (Real Estate Market)
-- Price trends
-- Policy impacts
-- New developments
-- Mortgage rates
+### 4. 客户经营
+- 客户服务与需求挖掘
+- 高净值客户维护策略
+- 客户保障方案配置
 
-### 5. 经济形势 (Economic Situation)
-- GDP growth
-- Industry trends
-- Employment data
-- Consumer confidence
+### 5. 行业政策
+- 银保监会监管政策
+- 利率与费率调整
+- 合规要求变化
 
-## Script Templates
+### 5. 市场动态
+- 理财市场收益趋势
+- 保障型产品需求变化
+- 行业竞争格局
 
-### Opening Line Templates
-- "最近{topic}挺火的，您这边有什么看法？"
-- "听说{topic}有新变化，您了解吗？"
-- "我看新闻说{topic}，想跟您交流一下。"
+## 话术模板
 
-### Deep Dive Templates
-- "我了解到{insight}，这对咱们业务影响挺大的。"
-- "从数据来看{data}，您觉得客户会怎么反应？"
-- "最近{event}，我觉得这可能是个机会。"
+### 开场白模板（以本地事件切入）
+- "最近{area}{event}，您这边有关注吗？"
+- "听说{local_news}，这对咱们网点周边的客户影响挺大的。"
+- "我看新闻说{area}要{change}，您觉得对咱们业务有什么影响？"
 
-### Response Guide Templates
-- "您觉得这个趋势会持续吗？"
-- "对于这种情况，您有什么建议？"
-- "您这边客户有什么反馈吗？"
+### 深入探讨模板（关联业务机会）
+- "{area}{event}之后，周边商户和居民的保险需求可能会有变化。"
+- "从{local_data}来看，这个区域的客户对{product}需求在增长。"
+- "最近{area}在推{policy}，我觉得可以趁这个机会跟客户聊聊。"
 
-## Tips for Quality Scripts
+### 回应引导模板（围绕本地业务机会）
+- "{area}这边的客户对这类需求怎么样？"
+- "您觉得{event}之后，周边客户会有什么新需求？"
+- "对于{area}这个区域，您觉得我们应该重点推哪类产品？"
 
-1. **Be specific**: Use actual data from search results, not generic statements
-2. **Be relevant**: Focus on topics that matter to branch staff
-3. **Be natural**: Scripts should sound conversational, not scripted
-4. **Be concise**: Each part should be brief and to the point
-5. **Be actionable**: Include questions that encourage dialogue
-6. **No intermediate output**: Do NOT show raw search results to the user. Only present the final integrated report.
+## 质量要求
 
-## Data Limitations
+1. **本地优先**：话术必须以网点周边的具体事件或新闻为切入点，避免泛泛的行业话题
+2. **数据具体**：使用搜索结果中的实际数据，引用具体的商圈名称、社区活动、政策变化
+3. **行业聚焦**：将本地热点与银行保险业务建立明确关联
+4. **自然表达**：话术应口语化，不要过于书面或机械
+5. **简洁有力**：每段话术简明扼要，便于记忆和使用
+6. **引导互动**：包含能引发对方分享本地市场观察的问题
+7. **不输出中间过程**：不要向用户展示原始搜索结果，只呈现最终整合报告
 
-- Search results are real-time and may vary
-- Some topics may not be relevant to all branches
-- Market data may not be the most recent
-- Always note that data is for reference only
+## 数据说明
+
+- 搜索结果为实时数据，可能有所变化
+- 部分话题可能与特定网点相关性不高
+- 市场数据可能不是最新的
+- 仅供参考使用
