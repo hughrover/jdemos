@@ -145,20 +145,26 @@ public class TencentWebSearchTool implements Function<TencentWebSearchTool.Searc
             request.getCnt() == 30 || request.getCnt() == 40 || request.getCnt() == 50)) {
             payload.put("Cnt", request.getCnt());
         }
-        // FromTime/ToTime: Unix时间戳，大于0才添加
+        // FromTime/ToTime: Unix时间戳（秒级）
+        // 默认搜索最近半年（180天）的信息
+        long currentTimeSeconds = System.currentTimeMillis() / 1000;
+
         if (request.getFromTime() != null && request.getFromTime() > 0) {
             payload.put("FromTime", request.getFromTime());
+        } else {
+            // 默认180天前
+            long fromTime = currentTimeSeconds - (180L * 24 * 60 * 60);
+            payload.put("FromTime", fromTime);
         }
         if (request.getToTime() != null && request.getToTime() > 0) {
             payload.put("ToTime", request.getToTime());
+        } else {
+            // 默认当前时间
+            payload.put("ToTime", currentTimeSeconds);
         }
         // Site: 站点过滤
         if (request.getSite() != null && !request.getSite().isEmpty()) {
             payload.put("Site", request.getSite());
-        }
-        // Industry: gov/news/acad/finance
-        if (request.getIndustry() != null && !request.getIndustry().isEmpty()) {
-            payload.put("Industry", request.getIndustry());
         }
 
         return objectMapper.writeValueAsString(payload);

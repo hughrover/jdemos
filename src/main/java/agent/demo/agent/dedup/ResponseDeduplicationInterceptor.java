@@ -14,7 +14,15 @@ import java.util.List;
 
 /**
  * Interceptor that detects and prevents duplicate responses.
- * Uses ResponseTracker to track response hashes and suppress duplicates.
+ * Uses ResponseTracker to track response content and suppress redundancies.
+ *
+ * Deduplication strategy:
+ * 1. Exact hash match → suppress (empty response)
+ * 2. New content is subset of old → suppress (empty response)
+ * 3. New content is a progressive extension of old → ALLOW through,
+ *    AND update tracker to the longer version
+ * 4. High LCS similarity → suppress (empty response)
+ * 5. Otherwise → allow through and record
  */
 public class ResponseDeduplicationInterceptor extends ModelInterceptor {
 
@@ -39,6 +47,11 @@ public class ResponseDeduplicationInterceptor extends ModelInterceptor {
         if (message instanceof AssistantMessage assistantMessage) {
             String content = assistantMessage.getText();
 
+            // Skip empty / whitespace-only responses
+            if (content == null || content.isBlank()) {
+                return response;
+            }
+
             if (tracker.isDuplicate(content)) {
                 logger.warn("[DEDUP] Suppressing duplicate response. Hash: {}",
                         tracker.calculateHash(content));
@@ -46,12 +59,23 @@ public class ResponseDeduplicationInterceptor extends ModelInterceptor {
                 // Return an empty response to suppress the duplicate
                 AssistantMessage emptyMessage = new AssistantMessage("");
                 return ModelResponse.of(emptyMessage);
-            } else {
-                // Record this response as the latest
-                tracker.recordResponse(content);
-                logger.debug("[DEDUP] Recorded new response. Hash: {}",
-                        tracker.calculateHash(content));
             }
+
+            // Handle progressive extension: new response is a superset of the old one.
+            // Allow it through since it contains more complete information,
+            // but update the tracker so the old shorter version is replaced.
+            if (tracker.isProgressiveExtension(content)) {
+                logger.info("[DEDUP] Progressive extension detected: replacing old record with extended version. " +
+                                "Old hash: {}, new hash: {}",
+                        tracker.getLastResponseHash(), tracker.calculateHash(content));
+                tracker.recordResponse(content);
+                return response;
+            }
+
+            // Normal case: record this response as the latest
+            tracker.recordResponse(content);
+            logger.debug("[DEDUP] Recorded new response. Hash: {}",
+                    tracker.calculateHash(content));
         }
 
         return response;

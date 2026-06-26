@@ -108,8 +108,12 @@ def call_tencent_search_api(query):
 
     try:
         timestamp = int(time.time())
+        # 默认搜索最近半年（180天）的信息
+        from_time = timestamp - (180 * 24 * 60 * 60)
         payload = json.dumps({
-            "Query": query
+            "Query": query,
+            "FromTime": from_time,
+            "ToTime": timestamp
         })
 
         print(f"[DEBUG] 请求URL: {TENCENT_SEARCH_API_URL}")

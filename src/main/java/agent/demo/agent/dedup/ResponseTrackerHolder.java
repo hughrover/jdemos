@@ -49,18 +49,14 @@ public class ResponseTrackerHolder {
     }
 
     /**
-     * Check if the current thread has a ResponseTracker.
+     * Check if the current thread already has a ResponseTracker
+     * without creating a new one.
      *
-     * @return true if a ResponseTracker exists for the current thread
+     * @return true if a ResponseTracker already exists for the current thread
      */
     public static boolean hasTracker() {
-        try {
-            // This will create a new tracker if one doesn't exist
-            // So we need a different approach
-            return false;
-        } catch (Exception e) {
-            return false;
-        }
+        ResponseTracker tracker = TRACKER_HOLDER.get();
+        return tracker != null && tracker.getLastResponseHash() != null;
     }
 
     /**
