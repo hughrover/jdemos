@@ -1,235 +1,280 @@
 ---
 name: branch-overview
-description: Use this skill when the user wants to get a branch overview, including performance data, customer activities, customer profiles, and local news. This includes querying branch performance, searching for peer bank performance, customer profiles, bank dynamics, and local news. If the user mentions branch overview, bank performance, customer activities, or local news about a bank branch, use this skill.
+description: 当用户需要获取银行网点概览时使用此技能。适用于查询网点业绩、客户活动、客群特征、周边新闻等信息。当用户提到网点概览、银行业绩、客户活动、周边新闻等内容时，触发此技能。
 ---
 
-# Branch Overview Guide
+# 银行网点概览指南
 
-## Overview
+## 概述
 
-This skill provides a comprehensive overview of bank branches, integrating:
-1. **Branch Performance** - Policy count and premium amount (local data)
-2. **Customer Activities** - Activity count and details (local data)
-3. **Customer Profile** - Customer portrait and needs (web search)
-4. **Local News** - Bank dynamics and local news (web search)
+本技能为银行保险客户经理/代理人提供网点全景视图，整合以下维度的信息：
+1. **网点业绩** — 保费金额、出单件数、业绩排名（内部系统数据，通过本地 mock 获取）
+2. **客经活动** — 讲座、社区活动、VIP 专场等（内部系统数据，通过本地 mock 获取）
+3. **同业业绩对比** — 周边银行网点银行业绩+银保业务业绩对比（联网搜索）
+4. **客群特征** — 内部系统客户画像 + 周边区域客群特征（混合来源）
+5. **银行动态** — 银行渠道政策、产品动态（联网搜索）
+6. **周边新闻** — 网点周边商圈、社区、交通等新闻（联网搜索）
 
-Supported banks: 浦发银行, 工商银行, 建设银行, 中国银行, 农业银行, 招商银行, etc.
+支持银行：浦发银行、工商银行、建设银行、中国银行、农业银行、招商银行、交通银行、邮储银行、兴业银行、中信银行等。
 
-## IMPORTANT: Two-Step Process
+## 数据来源说明
 
-**You MUST follow the two-step process to get branch overview:**
+本技能的数据来自两个渠道：
 
-### Step 1: Extract Branch Information
+### 内部系统数据（本地 mock）
+- **网点业绩**：出单件数、保费总和、业绩排名等
+- **客经活动**：活动场次、活动详情（讲座、社区活动、VIP 专场等）
 
-Extract bank name, city, and branch name from the user's question:
+这些数据通过本地 mock 数据模拟，实际使用时可对接内部系统 API。
 
-```
-User: 浦发银行上海制造局路支行的网点概览
-Extract: bank="浦发银行", city="上海", branch="制造局路支行"
+### 联网搜索数据
+- **同业业绩对比**：周边银行网点的银行业绩+银保业务业绩
+- **客群特征（周边部分）**：网点周边区域的居民画像、消费特征
+- **银行动态**：银行渠道政策、产品动态
+- **周边新闻**：网点周边商圈、社区、交通等新闻
 
-User: 工商银行北京朝阳支行的周边同业业绩怎么样？
-Extract: bank="工商银行", city="北京", branch="朝阳支行"
-```
+这些数据通过 `tencent_web_search` 工具实时获取。
 
-### Step 2: Call Branch Overview Script
+## 重要说明：使用腾讯网络搜索工具
 
-Use the `execute_shell_command` tool to get branch overview:
+**联网搜索部分必须使用 `tencent_web_search` 工具进行信息采集，不要创建单独的工具或脚本。**
 
-```
-execute_shell_command(command="python3 skills/branch-overview/scripts/branch_overview.py --bank '浦发银行' --city '上海' --branch '制造局路支行'")
-```
+## 操作步骤
 
-## Usage Examples
+### 第一步：提取网点信息
 
-### Get Full Branch Overview
-
-To get a complete branch overview:
-
-```
-User: 浦发银行上海制造局路支行的网点概览
-Action: execute_shell_command(command="python3 skills/branch-overview/scripts/branch_overview.py --bank '浦发银行' --city '上海' --branch '制造局路支行'")
-```
-
-### Query Peer Performance
-
-To query peer bank performance:
+从用户输入中解析以下信息：
+- **银行名称**：如浦发银行、工商银行
+- **城市**：如上海、北京
+- **网点名称**：如制造局路支行、朝阳支行
 
 ```
-User: 工商银行北京朝阳支行的周边同业业绩怎么样？
-Action: execute_shell_command(command="python3 skills/branch-overview/scripts/branch_overview.py --bank '工商银行' --city '北京' --branch '朝阳支行' --section peer_performance")
+用户：浦发银行上海制造局路支行的网点概览
+提取：bank="浦发银行", city="上海", branch="制造局路支行"
+
+用户：工商银行北京朝阳支行的周边同业业绩怎么样？
+提取：bank="工商银行", city="北京", branch="朝阳支行"
 ```
 
-### Query Customer Profile
+### 第二步：获取内部系统数据（mock）
 
-To query customer profile:
+从本地 mock 数据获取以下信息。**如果用户查询的网点在 mock 数据中不存在，则根据银行名称和城市生成合理的模拟数据。**
+
+#### Mock 数据参考
+
+**网点业绩数据：**
+
+| 银行 | 城市 | 网点 | 出单件数 | 保费总和（万元） | 业绩排名 |
+|------|------|------|---------|----------------|---------|
+| 浦发银行 | 上海 | 制造局路支行 | 156 | 2850.0 | 前30% |
+| 工商银行 | 北京 | 朝阳支行 | 203 | 4120.5 | 前15% |
+| 建设银行 | 深圳 | 福田支行 | 178 | 3560.8 | 前25% |
+| 招商银行 | 杭州 | 西湖支行 | 142 | 2680.3 | 前35% |
+| 中国银行 | 广州 | 天河支行 | 189 | 3890.2 | 前20% |
+| 农业银行 | 成都 | 武侯支行 | 135 | 2340.6 | 前40% |
+| 交通银行 | 南京 | 新街口支行 | 167 | 3120.4 | 前28% |
+| 邮储银行 | 武汉 | 江汉支行 | 128 | 2180.7 | 前45% |
+| 兴业银行 | 福州 | 鼓楼支行 | 148 | 2750.1 | 前32% |
+| 中信银行 | 重庆 | 渝中支行 | 158 | 2980.5 | 前30% |
+
+**客经活动数据：**
+
+| 银行 | 城市 | 网点 | 本月活动 | 活动详情 |
+|------|------|------|---------|---------|
+| 浦发银行 | 上海 | 制造局路支行 | 6场 | 1. 理财讲座 - 2026-06-05 - 讲座 - 45人<br>2. 客户答谢会 - 2026-06-12 - 答谢会 - 120人<br>3. 社区金融知识宣传 - 2026-06-15 - 社区活动 - 80人<br>4. VIP客户专属理财沙龙 - 2026-06-18 - VIP专场 - 25人<br>5. 保险产品推介会 - 2026-06-22 - 推介会 - 60人<br>6. 亲子财商教育活动 - 2026-06-25 - 社区活动 - 35人 |
+| 工商银行 | 北京 | 朝阳支行 | 8场 | 1. 贵金属投资讲座 - 2026-06-03 - 讲座 - 55人<br>2. 高端客户品酒会 - 2026-06-08 - VIP专场 - 30人<br>3. 社区防诈骗宣传 - 2026-06-11 - 社区活动 - 100人<br>4. 基金定投策略分享 - 2026-06-14 - 讲座 - 40人<br>5. 信用卡权益说明会 - 2026-06-17 - 推介会 - 65人<br>6. 企业主税务筹划讲座 - 2026-06-20 - 讲座 - 35人<br>7. VIP子女留学规划沙龙 - 2026-06-23 - VIP专场 - 20人<br>8. 社区健步走活动 - 2026-06-26 - 社区活动 - 80人 |
+| 建设银行 | 深圳 | 福田支行 | 5场 | 1. 房贷政策解读会 - 2026-06-04 - 讲座 - 50人<br>2. 新客户欢迎会 - 2026-06-10 - 答谢会 - 45人<br>3. 养老规划讲座 - 2026-06-16 - 讲座 - 38人<br>4. 社区义诊金融咨询 - 2026-06-20 - 社区活动 - 60人<br>5. 私募产品路演 - 2026-06-25 - VIP专场 - 15人 |
+| 招商银行 | 杭州 | 西湖支行 | 7场 | 1. 信用卡用卡安全讲座 - 2026-06-02 - 讲座 - 42人<br>2. 高端客户高尔夫活动 - 2026-06-06 - VIP专场 - 20人<br>3. 社区金融知识普及 - 2026-06-09 - 社区活动 - 75人<br>4. 保险产品说明会 - 2026-06-13 - 推介会 - 55人<br>5. 亲子手工DIY活动 - 2026-06-17 - 社区活动 - 30人<br>6. 跨境金融沙龙 - 2026-06-21 - 讲座 - 28人<br>7. 客户生日会 - 2026-06-24 - 答谢会 - 40人 |
+| 中国银行 | 广州 | 天河支行 | 6场 | 1. 外汇知识讲座 - 2026-06-03 - 讲座 - 35人<br>2. VIP客户体检活动 - 2026-06-08 - VIP专场 - 25人<br>3. 社区端午节活动 - 2026-06-12 - 社区活动 - 90人<br>4. 个人养老金政策解读 - 2026-06-16 - 讲座 - 45人<br>5. 企业开户优惠推介 - 2026-06-20 - 推介会 - 50人<br>6. 高端客户艺术品鉴赏 - 2026-06-24 - VIP专场 - 18人 |
+| 农业银行 | 成都 | 武侯支行 | 5场 | 1. 惠农政策宣讲 - 2026-06-04 - 讲座 - 60人<br>2. 社区健康讲座 - 2026-06-10 - 社区活动 - 55人<br>3. 理财产品说明会 - 2026-06-15 - 推介会 - 40人<br>4. VIP客户采摘活动 - 2026-06-20 - VIP专场 - 22人<br>5. 金融防诈骗宣传 - 2026-06-25 - 社区活动 - 70人 |
+| 交通银行 | 南京 | 新街口支行 | 6场 | 1. 信用卡权益讲座 - 2026-06-02 - 讲座 - 38人<br>2. 高端客户插花活动 - 2026-06-07 - VIP专场 - 20人<br>3. 社区金融知识竞赛 - 2026-06-11 - 社区活动 - 65人<br>4. 保险产品推介会 - 2026-06-15 - 推介会 - 45人<br>5. 企业财务管理讲座 - 2026-06-20 - 讲座 - 30人<br>6. 客户观影活动 - 2026-06-24 - 答谢会 - 50人 |
+| 邮储银行 | 武汉 | 江汉支行 | 4场 | 1. 个人养老金开户推介 - 2026-06-05 - 推介会 - 55人<br>2. 社区便民服务日 - 2026-06-12 - 社区活动 - 85人<br>3. 理财知识讲座 - 2026-06-18 - 讲座 - 42人<br>4. VIP客户采摘活动 - 2026-06-25 - VIP专场 - 18人 |
+| 兴业银行 | 福州 | 鼓楼支行 | 5场 | 1. 绿色金融讲座 - 2026-06-03 - 讲座 - 35人<br>2. VIP客户茶艺活动 - 2026-06-09 - VIP专场 - 20人<br>3. 社区金融知识宣传 - 2026-06-14 - 社区活动 - 70人<br>4. 信用卡用卡安全讲座 - 2026-06-19 - 讲座 - 40人<br>5. 客户答谢晚宴 - 2026-06-25 - 答谢会 - 45人 |
+| 中信银行 | 重庆 | 渝中支行 | 6场 | 1. 出国金融讲座 - 2026-06-02 - 讲座 - 32人<br>2. VIP客户高尔夫活动 - 2026-06-07 - VIP专场 - 18人<br>3. 社区端午节包粽子活动 - 2026-06-11 - 社区活动 - 80人<br>4. 保险产品说明会 - 2026-06-16 - 推介会 - 48人<br>5. 企业税务筹划讲座 - 2026-06-21 - 讲座 - 28人<br>6. 客户生日会 - 2026-06-25 - 答谢会 - 35人 |
+
+**说明**：当前通过 mock 数据模拟，实际部署时对接内部系统 API。如果用户查询的网点不在上述列表中，根据银行和城市生成合理的模拟数据。
+
+### 第三步：联网搜索资讯
+
+使用 `tencent_web_search` 执行 **4 次并行搜索**：
+
+#### 搜索 1：同业业绩对比（银行业绩 + 银保业务）
+```
+tencent_web_search(query="{city} {branch} 周边 银行 同业 业绩 银保 保险 对比")
+```
+示例：`tencent_web_search(query="上海 制造局路支行 周边 银行 同业 业绩 银保 保险 对比")`
+
+**说明**：此搜索维度需同时覆盖银行业绩和银保业务业绩。
+
+#### 搜索 2：客群特征（周边区域）
+```
+tencent_web_search(query="{city} {branch} 周边 客群 特征 居民 消费 理财 画像")
+```
+示例：`tencent_web_search(query="上海 制造局路支行 周边 客群 特征 居民 消费 理财 画像")`
+
+**说明**：此搜索获取网点周边区域的客群特征，与内部系统客户画像互补。
+
+#### 搜索 3：银行动态
+```
+tencent_web_search(query="{city} {bank} 银行 动态 政策 新闻 渠道 银保")
+```
+示例：`tencent_web_search(query="上海 浦发银行 银行 动态 政策 新闻 渠道 银保")`
+
+#### 搜索 4：周边新闻
+```
+tencent_web_search(query="{city} {branch} 周边 新闻 事件 商圈 社区")
+```
+示例：`tencent_web_search(query="上海 制造局路支行 周边 新闻 事件 商圈 社区")`
+
+### 第四步：整合结果并生成报告
+
+将内部数据和搜索结果整合为结构化报告：
+
+```markdown
+# 网点概览：{bank}{branch}
+
+## 📍 网点信息
+- **银行**: {bank}
+- **网点**: {branch}
+- **城市**: {city}
+
+## 📊 网点业绩（内部数据）
+- **保费金额**: {从 mock 数据表查询，如 2850.0 万元}
+- **出单件数**: {从 mock 数据表查询，如 156 件}
+- **业绩排名**: {从 mock 数据表查询，如 前30%}
+
+## 📅 客经活动（内部数据）
+- **本月活动**: {从 mock 数据表查询，如 6 场}
+- **活动详情**:
+  1. {活动1名称} - {日期} - {类型} - {参与人数}
+  2. {活动2名称} - {日期} - {类型} - {参与人数}
+  ...（从 mock 数据表查询完整列表）
+
+## 🏦 同业业绩对比（联网搜索）
+- **银行业绩对比**: {周边银行网点业绩对比}
+- **银保业务对比**: {周边银行银保业务业绩对比}
+
+## 👥 客群特征（混合来源）
+- **内部客户画像**: {从内部系统获取的客户画像}
+- **周边居民特征**: {从搜索结果提取的周边客群特征}
+- **消费需求**: {综合分析}
+- **理财偏好**: {综合分析}
+
+## 📰 周边时事（联网搜索）
+- **银行动态**: {从搜索结果提取}
+- **地区新闻**: {从搜索结果提取}
+
+---
+*数据来源：内部系统数据 + 实时网络搜索，仅供参考*
+*生成时间：{date}*
+
+**重要**：生成报告时，必须先运行 `date +"%Y年%m月%d日"` 获取当前日期，然后替换报告中的 `{date}`。不要猜测或使用训练数据中的日期。
+```
+
+## 使用示例
+
+### 获取完整网点概览
 
 ```
-User: 建设银行深圳福田支行的潜客画像是什么？
-Action: execute_shell_command(command="python3 skills/branch-overview/scripts/branch_overview.py --bank '建设银行' --city '深圳' --branch '福田支行' --section customer_profile")
+用户：浦发银行上海制造局路支行的网点概览
+内部数据：从 mock 表查询 → 出单156件，保费2850.0万元，排名前30%，本月6场活动
+搜索1：tencent_web_search(query="上海 制造局路支行 周边 银行 同业 业绩 银保 保险 对比")
+搜索2：tencent_web_search(query="上海 制造局路支行 周边 客群 特征 居民 消费 理财 画像")
+搜索3：tencent_web_search(query="上海 浦发银行 银行 动态 政策 新闻 渠道 银保")
+搜索4：tencent_web_search(query="上海 制造局路支行 周边 新闻 事件 商圈 社区")
+→ 整合结果 → 生成报告
 ```
 
-### Query Local News
-
-To query local news:
+### 查询同业业绩（含银保业务）
 
 ```
-User: 招商银行杭州西湖支行的周边新闻有哪些？
-Action: execute_shell_command(command="python3 skills/branch-overview/scripts/branch_overview.py --bank '招商银行' --city '杭州' --branch '西湖支行' --section local_news")
+用户：工商银行北京朝阳支行的周边同业业绩怎么样？
+步骤：tencent_web_search(query="北京 朝阳支行 周边 银行 同业 业绩 银保 保险 对比")
+→ 整合并输出"同业业绩对比"章节（含银行业绩+银保业务）
 ```
 
-## Query Flow
+### 查询客群特征
 
-### Full Overview Query
+```
+用户：建设银行深圳福田支行的潜客画像是什么？
+内部数据：获取客户画像（mock）
+步骤：tencent_web_search(query="深圳 福田支行 周边 客群 特征 居民 消费 理财 画像")
+→ 整合内部画像+周边客群特征，输出"客群特征"章节
+```
+
+### 查询周边新闻
+
+```
+用户：招商银行杭州西湖支行的周边新闻有哪些？
+步骤：tencent_web_search(query="杭州 西湖支行 周边 新闻 事件 商圈 社区")
+→ 整合并输出"周边新闻"章节
+```
+
+## 查询流程
 
 ```
 用户输入: "浦发银行上海制造局路支行的网点概览"
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 1: 提取银行、城市、网点信息        │
+│ 第一步：提取网点信息                    │
 │ bank="浦发银行", city="上海",           │
 │ branch="制造局路支行"                   │
 └─────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ Step 2: 调用网点概览脚本                │
-│ branch_overview.py --bank '浦发银行'    │
-│   --city '上海' --branch '制造局路支行' │
+│ 第二步：从 mock 数据表查询内部数据      │
+│ 1. 网点业绩（保费、出单、排名）         │
+│ 2. 客经活动（本月活动详情）             │
+│ 如网点不在表中，生成合理模拟数据        │
 └─────────────────────────────────────────┘
     │
     ▼
 ┌─────────────────────────────────────────┐
-│ 脚本内部流程：                          │
-│ 1. 查询本地业绩数据                     │
-│ 2. 查询本地活动数据                     │
-│ 3. 联网搜索同业业绩                     │
-│ 4. 联网搜索潜客画像                     │
-│ 5. 联网搜索银行动态                     │
-│ 6. 联网搜索周边新闻                     │
-│ 7. 聚合所有数据并格式化输出             │
+│ 第三步：并行执行4次联网搜索             │
+│ 1. 同业业绩对比（银行业绩+银保业务）    │
+│ 2. 客群特征（周边区域）                 │
+│ 3. 银行动态（政策、渠道新闻）           │
+│ 4. 周边新闻（商圈、社区、交通）         │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│ 第四步：整合结果并生成报告              │
+│ - 内部数据 + 搜索结果                   │
+│ - 结构化输出                            │
+│ - 标注数据来源                          │
 └─────────────────────────────────────────┘
     │
     ▼
 返回完整的网点概览报告
 ```
 
-## Script Parameters
+## 分章节查询
 
-The script accepts the following parameters:
+用户可以查询特定章节的信息，系统 SHALL 根据用户意图判断查询范围：
 
-```
-python3 branch_overview.py --bank <银行名称> --city <城市> --branch <网点名称> [options]
-```
+| 用户意图关键词 | 查询章节 | 数据来源 |
+|---------------|---------|---------|
+| 业绩、保费、出单、排名 | 网点业绩 | 内部系统（mock） |
+| 活动、讲座、社区活动 | 客经活动 | 内部系统（mock） |
+| 同业、对比、周边银行、银保 | 同业业绩对比 | 联网搜索 |
+| 客群、画像、居民、消费 | 客群特征 | 内部系统 + 联网搜索 |
+| 动态、政策、渠道 | 银行动态 | 联网搜索 |
+| 新闻、周边、商圈、事件 | 周边新闻 | 联网搜索 |
 
-### Required Parameters
+## 质量要求
 
-- `--bank` - Bank name (e.g., "浦发银行", "工商银行")
-- `--city` - City name (e.g., "上海", "北京")
-- `--branch` - Branch name (e.g., "制造局路支行", "朝阳支行")
+1. **数据来源清晰**：明确标注每个章节的数据来源（内部数据/联网搜索/混合）
+2. **结构清晰**：按章节组织，便于快速浏览
+3. **银保覆盖**：同业业绩对比必须包含银行业绩和银保业务业绩两个维度
+4. **处理缺失**：搜索无结果的章节标注"暂无数据"
+5. **日期准确**：使用系统当前日期，不要猜测
 
-### Optional Parameters
+## 数据说明
 
-- `--section` - Specific section to query:
-  - `all` - Full overview (default)
-  - `performance` - Branch performance only
-  - `activities` - Customer activities only
-  - `peer_performance` - Peer bank performance (web search)
-  - `customer_profile` - Customer profile (web search)
-  - `bank_dynamics` - Bank dynamics (web search)
-  - `local_news` - Local news (web search)
-
-### Examples
-
-```bash
-# Full overview
-python3 branch_overview.py --bank '浦发银行' --city '上海' --branch '制造局路支行'
-
-# Performance only
-python3 branch_overview.py --bank '浦发银行' --city '上海' --branch '制造局路支行' --section performance
-
-# Peer performance only
-python3 branch_overview.py --bank '工商银行' --city '北京' --branch '朝阳支行' --section peer_performance
-
-# Customer profile only
-python3 branch_overview.py --bank '建设银行' --city '深圳' --branch '福田支行' --section customer_profile
-
-# Local news only
-python3 branch_overview.py --bank '招商银行' --city '杭州' --branch '西湖支行' --section local_news
-```
-
-## Response Format
-
-The script returns branch overview in the following format:
-
-```
-=== 网点概览：浦发银行制造局路支行 ===
-
-【网点业绩】
-本地数据：出单件数 156件，保费总和 2850.0万元
-同业对比：周边银行平均出单142件，本支行排名前30%
-
-【客经活动】
-本月活动：8场
-活动明细：
-1. 理财讲座 - 2024-06-05 - 讲座 - 参与人数：45人
-2. 客户答谢会 - 2024-06-12 - 答谢会 - 参与人数：120人
-...
-
-【客群特征】
-潜客画像：周边居民以中产家庭为主，理财需求旺盛...
-
-【周边时事】
-银行动态：上海银行业推出新政策...
-地区新闻：黄浦区制造业局路周边新建商业综合体...
-```
-
-## Technical Details
-
-### Service Architecture
-
-The skill uses a layered architecture:
-
-```
-智能体
-    ↓ 调用
-Branch Overview Script (branch_overview.py)
-    ↓ HTTP调用
-Branch Performance API (本地数据)
-Branch Activity API (本地数据)
-Tencent Web Search API (联网搜索)
-    ↓
-数据聚合与格式化
-    ↓
-返回网点概览报告
-```
-
-### Data Sources
-
-1. **Local Data** - Branch performance and activity data
-   - Policy count and premium amount
-   - Activity count and details
-
-2. **Web Search** - Real-time information via Tencent Web Search API
-   - Peer bank performance comparison
-   - Customer profile and needs
-   - Bank channel dynamics
-   - Local news
-
-### Supported Banks
-
-- 浦发银行 (SPDB)
-- 工商银行 (ICBC)
-- 建设银行 (CCB)
-- 中国银行 (BOC)
-- 农业银行 (ABC)
-- 招商银行 (CMB)
-- 交通银行 (BOCOM)
-- 邮储银行 (PSBC)
-- 兴业银行 (CIB)
-- 中信银行 (CITIC)
-
-### Environment Variables
-
-- `TENCENT_API_SECRET_ID` - Tencent Cloud API SecretId
-- `TENCENT_API_SECRET_KEY` - Tencent Cloud API SecretKey
+- 内部系统数据通过 mock 模拟，实际部署时对接真实 API
+- 联网搜索结果为实时数据，可能有所变化
+- 部分网点可能搜索不到详细信息
+- 仅供参考使用
